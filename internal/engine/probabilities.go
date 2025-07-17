@@ -7,13 +7,13 @@ import (
 
 // ContestSuccessFunction calculates the probability of winning a round based on team expenditures and other factors.
 // This is a Tullock contest success function
-func ContestSuccessFunction_simple(x float64, y float64, r float64) float64 {
+func ContestSuccessFunction_simples(x float64, y float64, r float64) float64 {
 	probability := (math.Pow(x, r) / (math.Pow(x, r) + math.Pow(y, r)))
 	return probability
 }
 
 func bool_CSF_simple(x float64, y float64, r float64) bool {
-	probability := ContestSuccessFunction_simple(x, y, r)
+	probability := ContestSuccessFunction_simples(x, y, r)
 	return rand.Float64() < probability
 }
 
@@ -29,7 +29,7 @@ func CSFNormalDistribution_std_4(x float64, y float64, r float64, minOutput floa
 	// First calculate the base probability using Contest Success Function (Tullock contest)
 	csfProb := 0.5
 	if x+y > 0 {
-		csfProb = ContestSuccessFunction_simple(x, y, r)
+		csfProb = ContestSuccessFunction_simples(x, y, r)
 	}
 
 	// Calculate the mean position between minOutput and maxOutput based on CSF probability

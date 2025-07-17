@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"csgo-economy-sim/internal/models"
 	"math/rand"
 )
 
@@ -27,8 +26,8 @@ func NewGame(Team1Name string, Team1Strategy string, Team2Name string, Team2Stra
 
 	currentCT := rand.Intn(2) == 0
 
-	Team_1 := NewTeam(Team1Name, gameRules.startingFunds, currentCT, gameRules.defaultEquipment, models.Strategy{Name: Team1Strategy})
-	Team_2 := NewTeam(Team2Name, gameRules.startingFunds, !currentCT, gameRules.defaultEquipment, models.Strategy{Name: Team2Strategy})
+	Team_1 := NewTeam(Team1Name, gameRules.startingFunds, currentCT, gameRules.defaultEquipment, Team1Strategy)
+	Team_2 := NewTeam(Team2Name, gameRules.startingFunds, !currentCT, gameRules.defaultEquipment, Team2Strategy)
 
 	return &Game{
 		Team1:          Team_1,
@@ -110,7 +109,8 @@ func (g *Game) GameFinished() {
 }
 
 func (g *Game) UpdateScore(winner bool) {
-	if winner == true {
+	g.WinnerTeam = winner
+	if winner {
 		g.Score[0]++
 	} else {
 		g.Score[1]++

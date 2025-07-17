@@ -1,7 +1,5 @@
 package engine
 
-import "csgo-economy-sim/internal/models"
-
 // Team represents a team in the simulation with its properties and methods.
 type Team struct {
 	Name             string
@@ -14,10 +12,10 @@ type Team struct {
 	Score            int
 	Consecutiveloss  int // Consecutive losses for the team
 	Spent            int
-	Strategy         models.Strategy
+	Strategy         string // Strategy name for the team
 }
 
-func NewTeam(name string, startingfunds int, side bool, defaultequipment int, strategy models.Strategy) *Team {
+func NewTeam(name string, startingfunds int, side bool, defaultequipment int, strategy string) *Team {
 	return &Team{
 		Name:             name,
 		Funds:            5 * startingfunds, // Starting funds
@@ -68,14 +66,14 @@ func (t *Team) NewRound() {
 	t.Playersalive = 5                                                      // Set all players alive at the start of the round
 }
 
-// this is unclear for now, as strategy is not defined yet, especially what information a team receives
+// for now it is a set of variables, in the future it could be a json file with information
+// the state of the game, team, round etc.
 func (t *Team) BuyPhase(Round int, ScoreOpo int) {
-	// Logic for buying equipment at the start of the round
-	// This could include checking funds, buying weapons, armor, etc.
-	if t.Funds >= t.DefaultEquipment {
-		t.SpendFunds(t.DefaultEquipment)  // Spend default equipment cost
-		t.Equipment += t.DefaultEquipment // Add to equipment
-	}
+
+	investment := CallStrategy(t, Round, ScoreOpo) // Call the strategy manager to get investment amount
+
+	t.SpendFunds(investment) // Spend investment amount
+
 }
 
 func (t *Team) EarnFunds(amount int) {
