@@ -6,10 +6,10 @@ import (
 )
 
 type GameRules struct {
-	defaultEquipment int     // Default equipment cost
-	otFunds          int     // Overtime funds
-	startingFunds    int     // Starting funds for teams
-	halfLength       int     // Length of a half in rounds
+	DefaultEquipment float64 // Default equipment cost
+	OTFunds          float64 // Overtime funds
+	StartingFunds    float64 // Starting funds for teams
+	HalfLength       int     // Length of a half in rounds
 	CSF_r            float64 // Contest Success Function parameter
 }
 
@@ -28,10 +28,10 @@ func NewGameRules(pathtoFile string) GameRules {
 		// If file not found or parse error, fallback to defaults
 	}
 	return GameRules{
-		defaultEquipment: 200,
-		otFunds:          10000,
-		startingFunds:    800,
-		halfLength:       15,
+		DefaultEquipment: 200,
+		OTFunds:          10000,
+		StartingFunds:    800,
+		HalfLength:       15,
 		CSF_r:            0.5, // Default value for CSF_r
 	}
 }

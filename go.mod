@@ -1,4 +1,4 @@
-module csgo-economy-sim
+module CSGO_ABM
 
 go 1.18
 

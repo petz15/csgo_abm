@@ -5,22 +5,22 @@ import (
 )
 
 type Round struct {
+	RoundNumber   int
 	Team1         *Team
 	Team2         *Team
 	CTTeam        bool // false if Team1 is CT
-	RoundNumber   int
 	WinnerTeam    bool //False if Team1 wins, true if Team2 wins
 	WinnerSide    bool // false if CT wins, true if T wins
 	BombPlanted   bool
 	Sideswitch    bool // True if sideswitch has occurred
 	Bombplanted   bool
-	GameRules     *GameRules
-	SurvivingT1   int // Number of surviving T1 players
-	SurvivingT2   int // Number of surviving T2 players
-	EquipmentT1   int // Total equipment value for T1 team
-	EquipmentT2   int // Total equipment value for T2 team
-	FundsearnedT1 int // Total funds earned by T1 team
-	FundsearnedT2 int // Total funds earned by T2 team
+	gameRules     *GameRules
+	SurvivingT1   int     // Number of surviving T1 players
+	SurvivingT2   int     // Number of surviving T2 players
+	EquipmentT1   float64 // Total equipment value for T1 team
+	EquipmentT2   float64 // Total equipment value for T2 team
+	FundsearnedT1 float64 // Total funds earned by T1 team
+	FundsearnedT2 float64 // Total funds earned by T2 team
 }
 
 func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules) *Round {
@@ -38,7 +38,7 @@ func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, 
 		BombPlanted:   false,
 		Sideswitch:    sidewitch,
 		Bombplanted:   false,
-		GameRules:     gamerules,
+		gameRules:     gamerules,
 		SurvivingT1:   0,
 		SurvivingT2:   0,
 		EquipmentT1:   0,
@@ -51,7 +51,8 @@ func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, 
 // solution for what information gets passed to the teams, could be a json file in the gamerules which specifies
 // which variables are passed to the teams. No clue how this will be done yet, but it is an idea.
 func (r *Round) BuyPhase() {
-
+	r.Team1.BuyPhase(r.RoundNumber, r.Team2.Score)
+	r.Team2.BuyPhase(r.RoundNumber, r.Team1.Score)
 }
 
 func (r *Round) RoundStart() {
@@ -67,6 +68,7 @@ func (r *Round) RoundStart() {
 }
 
 func (r *Round) RoundEnd() {
+	//TODO: Create better probabilities. e.g. if no bomb plant and T wins, no CT can survive
 
 	//determine surviving players
 	r.determineSurvivors()
@@ -93,8 +95,8 @@ func (r *Round) determineFundsEarned() {
 	}
 
 	// Funds earned by killing players
-	r.FundsearnedT1 = (5 - r.SurvivingT2) * 300 // 300 per player killed
-	r.FundsearnedT2 = (5 - r.SurvivingT1) * 300 // 300 per player killed
+	r.FundsearnedT1 = float64((5 - r.SurvivingT2) * 300) // 300 per player killed
+	r.FundsearnedT2 = float64((5 - r.SurvivingT1) * 300) // 300 per player killed
 
 	if r.BombPlanted && r.WinnerSide {
 		winnerFunds += 300 // Add bonus for winning team
@@ -104,13 +106,13 @@ func (r *Round) determineFundsEarned() {
 	}
 
 	if !r.WinnerTeam {
-		r.FundsearnedT1 += winnerFunds
+		r.FundsearnedT1 += float64(winnerFunds)
 		loserBonusFunds += r.LossBonusCalculation(r.Team2) // Calculate loss bonus for T2
-		r.FundsearnedT2 += loserBonusFunds
+		r.FundsearnedT2 += float64(loserBonusFunds * 5)
 	} else {
-		r.FundsearnedT2 += winnerFunds
+		r.FundsearnedT2 += float64(winnerFunds)
 		loserBonusFunds += r.LossBonusCalculation(r.Team1) // Calculate loss bonus for T1
-		r.FundsearnedT1 += loserBonusFunds
+		r.FundsearnedT1 += float64(loserBonusFunds * 5)
 	}
 
 }
@@ -146,8 +148,8 @@ func (r *Round) determineSurvivors() {
 	team1equipment := r.Team1.Equipment
 	team2equipment := r.Team2.Equipment
 
-	r.SurvivingT1 = int(math.Round(CSFNormalDistribution_std_4(float64(team1equipment), float64(team2equipment), r.GameRules.CSF_r, 0, 5)))
-	r.SurvivingT2 = int(math.Round(CSFNormalDistribution_std_4(float64(team2equipment), float64(team1equipment), r.GameRules.CSF_r, 0, 5)))
+	r.SurvivingT1 = int(math.Round(CSFNormalDistribution_std_4(float64(team1equipment), float64(team2equipment), r.gameRules.CSF_r, 0, 5)))
+	r.SurvivingT2 = int(math.Round(CSFNormalDistribution_std_4(float64(team2equipment), float64(team1equipment), r.gameRules.CSF_r, 0, 5)))
 
 }
 
@@ -158,8 +160,8 @@ func (r *Round) determineRemainingEquipment() {
 	// Careful! Here the inverse is used. Because the remaining equipement is largely by the other
 	// teams equipment and their chances of winning fights, i.e.
 	//TODO: This should potentiall be changed i.e. to factor in the equipment lost by the other team
-	r.EquipmentT1 = (int(math.Round(CSFNormalDistribution_std_4(float64(team2equipment), float64(team1equipment), r.GameRules.CSF_r, (float64(team1equipment/5) * 0.8), (float64(team1equipment/5) * 1.2))))) * r.SurvivingT1
-	r.EquipmentT2 = (int(math.Round(CSFNormalDistribution_std_4(float64(team1equipment), float64(team2equipment), r.GameRules.CSF_r, (float64(team2equipment/5) * 0.8), (float64(team2equipment/5) * 1.2))))) * r.SurvivingT2
+	r.EquipmentT1 = (CSFNormalDistribution_std_4(team2equipment, team1equipment, r.gameRules.CSF_r, (team1equipment / 5 * 0.8), ((math.Max(team1equipment, team2equipment) / 5) * 1.2))) * float64(r.SurvivingT1)
+	r.EquipmentT2 = (CSFNormalDistribution_std_4(team1equipment, team2equipment, r.gameRules.CSF_r, (team2equipment / 5 * 0.8), ((math.Max(team1equipment, team2equipment) / 5) * 1.2))) * float64(r.SurvivingT2)
 }
 
 func (r *Round) determineBombplant() {
@@ -173,7 +175,7 @@ func (r *Round) determineBombplant() {
 		tteam_equipment = r.Team2.Equipment
 	}
 
-	r.BombPlanted = bool_CSF_simple(float64(ctteam_equipment), float64(tteam_equipment), r.GameRules.CSF_r)
+	r.BombPlanted = bool_CSF_simple(ctteam_equipment, tteam_equipment, r.gameRules.CSF_r)
 
 }
 
@@ -182,7 +184,7 @@ func (r *Round) determineWinner() {
 	team1equipment := r.Team1.Equipment
 	team2equipment := r.Team2.Equipment
 
-	r.WinnerTeam = bool_CSF_simple(float64(team1equipment), float64(team2equipment), r.GameRules.CSF_r)
+	r.WinnerTeam = bool_CSF_simple(team1equipment, team2equipment, r.gameRules.CSF_r)
 
 	if r.WinnerTeam == r.CTTeam {
 		r.WinnerSide = false // CT wins
