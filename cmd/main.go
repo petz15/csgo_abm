@@ -11,6 +11,7 @@ func main() {
 	config := struct {
 		NumSimulations int
 		MaxConcurrent  int
+		BatchSize      int
 		Team1Name      string
 		Team1Strategy  string
 		Team2Name      string
@@ -19,6 +20,7 @@ func main() {
 	}{
 		NumSimulations: 1, // Default to single simulation
 		MaxConcurrent:  runtime.NumCPU(),
+		BatchSize:      100, // Process in batches to manage memory usage
 		Team1Name:      "Team A",
 		Team1Strategy:  "all_in",
 		Team2Name:      "Team B",
@@ -38,6 +40,11 @@ func main() {
 		case "-c", "--cores":
 			if i+1 < len(args) {
 				fmt.Sscanf(args[i+1], "%d", &config.MaxConcurrent)
+				i++
+			}
+		case "-b", "--batch":
+			if i+1 < len(args) {
+				fmt.Sscanf(args[i+1], "%d", &config.BatchSize)
 				i++
 			}
 		case "-t1", "--team1":
@@ -74,6 +81,7 @@ func main() {
 		err := RunParallelSimulations(SimulationConfig{
 			NumSimulations: config.NumSimulations,
 			MaxConcurrent:  config.MaxConcurrent,
+			BatchSize:      config.BatchSize,
 			Team1Name:      config.Team1Name,
 			Team1Strategy:  config.Team1Strategy,
 			Team2Name:      config.Team2Name,
@@ -92,6 +100,7 @@ func printUsage() {
 	fmt.Println("CS:GO Economy Simulation Usage:")
 	fmt.Println("  -n, --num <number>     Number of simulations to run (default: 1)")
 	fmt.Println("  -c, --cores <number>   Number of concurrent simulations (default: number of CPU cores)")
+	fmt.Println("  -b, --batch <number>   Batch size for memory management (default: 100)")
 	fmt.Println("  -t1, --team1 <strategy> Team 1 strategy (default: all_in)")
 	fmt.Println("  -t2, --team2 <strategy> Team 2 strategy (default: default_half)")
 	fmt.Println("  -h, --help             Print this help message")
@@ -103,4 +112,6 @@ func printUsage() {
 	fmt.Println("  go run ./cmd")
 	fmt.Println("  # Run 100 simulations using 8 cores")
 	fmt.Println("  go run ./cmd -n 100 -c 8")
+	fmt.Println("  # Run 2000 simulations with smaller batches to manage memory")
+	fmt.Println("  go run ./cmd -n 2000 -c 8 -b 50")
 }

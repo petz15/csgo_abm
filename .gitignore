@@ -12,7 +12,10 @@ go.work
 # Go build and dependency directories
 /bin/
 /pkg/
+
+#temp solution for the large directories being written. these do not need to be committed
 /cmd/results
+/results
 
 # Python specific
 __pycache__/

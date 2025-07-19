@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -13,6 +14,7 @@ import (
 type SimulationConfig struct {
 	NumSimulations int
 	MaxConcurrent  int
+	BatchSize      int
 	Team1Name      string
 	Team1Strategy  string
 	Team2Name      string
@@ -26,11 +28,12 @@ func RunParallelSimulations(config SimulationConfig) error {
 	fmt.Printf("Team 1: %s with '%s' strategy\n", config.Team1Name, config.Team1Strategy)
 	fmt.Printf("Team 2: %s with '%s' strategy\n", config.Team2Name, config.Team2Strategy)
 
-	// Create a wait group to wait for all simulations to complete
-	var wg sync.WaitGroup
-
 	// Create a semaphore channel to limit concurrent executions
 	sem := make(chan bool, config.MaxConcurrent)
+
+	// Progress tracking
+	progressCh := make(chan int, config.MaxConcurrent*2)
+	completedCount := 0
 
 	// Start time for performance measurement
 	startTime := time.Now()
@@ -39,34 +42,81 @@ func RunParallelSimulations(config SimulationConfig) error {
 	resultsDir := "results"
 	os.MkdirAll(resultsDir, 0755)
 
-	// Run simulations
-	for i := 0; i < config.NumSimulations; i++ {
-		wg.Add(1)
+	// Create a progress goroutine
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
 
-		// Run each simulation in a goroutine
-		go func(simIndex int) {
-			defer wg.Done()
-			sem <- true              // Acquire semaphore
-			defer func() { <-sem }() // Release semaphore when done
+		for {
+			select {
+			case n := <-progressCh:
+				completedCount += n
+				// Only print every 50 simulations to reduce console spam
+				if completedCount%50 == 0 || completedCount == config.NumSimulations {
+					elapsed := time.Since(startTime)
+					fmt.Printf("Progress: %d/%d simulations (%.1f%%) | Time elapsed: %s\n",
+						completedCount, config.NumSimulations,
+						float64(completedCount)/float64(config.NumSimulations)*100,
+						elapsed.Round(time.Second))
+				}
+			case <-ticker.C:
+				// Periodically report memory usage
+				var m runtime.MemStats
+				runtime.ReadMemStats(&m)
+				fmt.Printf("Memory usage: %.2f MB (Alloc) / %.2f MB (Sys)\n",
+					float64(m.Alloc)/1024/1024,
+					float64(m.Sys)/1024/1024)
+			}
 
-			fmt.Printf("Starting simulation %d...\n", simIndex+1)
+			if completedCount >= config.NumSimulations {
+				return
+			}
+		}
+	}()
 
-			simPrefix := fmt.Sprintf("sim_%d_", simIndex+1)
-			StartGame(
-				config.Team1Name,
-				config.Team1Strategy,
-				config.Team2Name,
-				config.Team2Strategy,
-				config.GameRules,
-				simPrefix,
-			)
+	// Run simulations in batches to control memory usage
+	batchSize := config.BatchSize // Use batch size from configuration
 
-			fmt.Printf("Completed simulation %d\n", simIndex+1)
-		}(i)
+	for i := 0; i < config.NumSimulations; i += batchSize {
+		// Calculate end of current batch (or end of simulations)
+		end := i + batchSize
+		if end > config.NumSimulations {
+			end = config.NumSimulations
+		}
+
+		// Process this batch
+		var batchWg sync.WaitGroup
+		for j := i; j < end; j++ {
+			batchWg.Add(1)
+
+			// Run each simulation in a goroutine
+			go func(simIndex int) {
+				defer batchWg.Done()
+				sem <- true              // Acquire semaphore
+				defer func() { <-sem }() // Release semaphore when done
+
+				// Run the simulation
+				simPrefix := fmt.Sprintf("sim_%d_", simIndex+1)
+				StartGame(
+					config.Team1Name,
+					config.Team1Strategy,
+					config.Team2Name,
+					config.Team2Strategy,
+					config.GameRules,
+					simPrefix,
+				)
+
+				// Report progress
+				progressCh <- 1
+			}(j)
+		}
+
+		// Wait for this batch to complete
+		batchWg.Wait()
+
+		// Force garbage collection between batches to reduce memory pressure
+		runtime.GC()
 	}
-
-	// Wait for all simulations to complete
-	wg.Wait()
 
 	// Calculate and display execution time
 	duration := time.Since(startTime)
