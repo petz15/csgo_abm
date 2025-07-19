@@ -7,7 +7,10 @@ This project implements an agent-based model simulating the economy aspect of Co
 ```
 CSGO_ABM
 ├── cmd
-│   └── main.go               # Entry point of the application
+│   ├── main.go               # Entry point with CLI argument handling
+│   ├── game.go               # Individual game simulation logic
+│   ├── simulation.go         # Parallel simulation management
+│   └── results               # Directory for simulation results
 ├── internal
 │   ├── engine
 │   │   ├── game.go           # Core game logic and state management
@@ -76,19 +79,26 @@ The simulation uses several probability models to determine outcomes:
 
 ### Running Simulations
 
-The simulation creates a game with two teams using specified strategies:
+You can run simulations with various command-line arguments:
 
-```go
-// From cmd/main.go
-Team1Name := "Team A"
-Team1Strategy := "all_in"
-Team2Name := "Team B"
-Team2Strategy := "default_half"
-gamerules := "default"
+```bash
+# Run a single simulation
+go run ./cmd
 
-game := engine.NewGame(ID, Team1Name, Team1Strategy, Team2Name, Team2Strategy, gamerules)
-game.Start()
+# Run 100 simulations using 8 cores 
+go run ./cmd -n 100 -c 8
+
+# Use specific team strategies
+go run ./cmd -t1 all_in -t2 default_half
 ```
+
+#### Command-Line Arguments
+
+- `-n, --num <number>`: Number of simulations to run (default: 1)
+- `-c, --cores <number>`: Number of concurrent simulations (default: number of CPU cores)
+- `-t1, --team1 <strategy>`: Team 1 strategy (default: all_in)
+- `-t2, --team2 <strategy>`: Team 2 strategy (default: default_half)
+- `-h, --help`: Print help message
 
 ### Creating Custom Strategies
 
@@ -112,11 +122,37 @@ Results are exported as JSON files with unique identifiers:
 - Format: `YYYYMMDD_HHMMSS_hostname_randomID.json`
 - Contains complete game state including rounds, team performance, and outcome
 
+When running multiple simulations in parallel, the system:
+1. Creates individual result files for each simulation
+2. Moves all results to a timestamped directory
+3. Generates a summary file (`simulation_summary.json`) with aggregate statistics including:
+   - Win rates for each team
+   - Score distribution
+   - Average number of rounds played
+   - Overtime rate
+
+## Features
+
+- Random assignment of teams to Counter-Terrorist (CT) and Terrorist (T) sides
+- Dynamic economy system with realistic fund allocation and spending strategies
+- Contest Success Function (CSF) for probabilistic outcome determination
+- Normal distribution sampling based on team expenditures with customizable parameters
+- Equipment value tracking and survival calculations
+- Complete match simulation including:
+  - Half-time side swapping after 15 rounds
+  - Overtime mechanics when tied at 15-15
+  - Loss bonus calculation based on consecutive losses
+  - Bomb plant mechanics and related bonuses
+- Strategy implementation through pluggable strategy modules
+- Parallel simulation processing with configurable concurrency
+- Simulation result aggregation and statistical analysis
+- JSON export of simulation results with unique game identifiers
+
 ## Future Developments
 
 - Improved strategy manager with more sophisticated decision-making models
 - Enhanced probability models for more realistic outcome simulation
-- Support for batch simulations and comparative analysis
+- Advanced statistical analysis tools for simulation results
 - Visualization tools for simulation results
 - Additional game mechanics such as eco rounds and force buys
 
