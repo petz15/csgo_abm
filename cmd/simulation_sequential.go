@@ -63,7 +63,7 @@ func sequentialsimulation(config SimulationConfig_v2) error {
 	// Show stats
 	simID := util.CreateGameID()
 	showstats(&stats)
-	exportSummary_v2(&stats, simID+"_results.json")
+	exportSummary_v2(&stats, simID)
 
 	return nil
 }
@@ -121,11 +121,11 @@ func showstats(stats *SimulationStats_v2) {
 	fmt.Println(strings.Repeat("=", 60))
 }
 
-func exportSummary_v2(stats *SimulationStats_v2, path string) error {
+func exportSummary_v2(stats *SimulationStats_v2, simID string) error {
+	filename := fmt.Sprintf("%s_results.json", simID)
 	data, err := json.MarshalIndent(stats, "", "  ")
 	if err != nil {
 		return err
 	}
-
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(filename, data, 0644)
 }
