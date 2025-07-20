@@ -23,6 +23,7 @@ type SimulationConfig struct {
 	Team2Name      string
 	Team2Strategy  string
 	GameRules      string
+	ExportResults  bool // Whether to export individual game results
 }
 
 // SimulationStats tracks statistics across all simulations
@@ -235,6 +236,15 @@ func RunParallelSimulations(config SimulationConfig) error {
 		config.NumSimulations, config.MaxConcurrent)
 	fmt.Printf("Memory limit: %d MB\n", config.MemoryLimit)
 
+	if config.ExportResults {
+		fmt.Printf("Individual result export: ENABLED (results will be saved to %s/)\n", resultsDir)
+		if config.NumSimulations > 10000 {
+			fmt.Printf("WARNING: Exporting %d individual results may create filesystem pressure\n", config.NumSimulations)
+		}
+	} else {
+		fmt.Println("Individual result export: DISABLED (summary-only mode)")
+	}
+
 	// Create worker pool
 	pool := NewWorkerPool(config.MaxConcurrent, stats)
 	pool.Start()
@@ -247,7 +257,7 @@ func RunParallelSimulations(config SimulationConfig) error {
 	resultsDone := make(chan bool)
 	go func() {
 		defer close(resultsDone)
-		collectResults(pool.results, stats, config.NumSimulations)
+		collectResults(pool.results, stats, config.NumSimulations, config.ExportResults, resultsDir)
 	}()
 
 	// Track memory usage
@@ -357,9 +367,16 @@ func RunParallelSimulations(config SimulationConfig) error {
 	// Print final results
 	printFinalStats(stats)
 
+	// Print export information
+	fmt.Printf("\nResults exported to: %s/\n", resultsDir)
+	if config.ExportResults {
+		fmt.Printf("- Individual game results: %d JSON files\n", atomic.LoadInt64(&stats.CompletedSims))
+	}
+	fmt.Println("- Summary statistics: simulation_summary.json")
+
 	return nil
 } // collectResults processes simulation results and updates statistics
-func collectResults(results <-chan SimulationResult, stats *SimulationStats, totalSims int) {
+func collectResults(results <-chan SimulationResult, stats *SimulationStats, totalSims int, exportResults bool, resultsDir string) {
 	processedCount := int64(0)
 
 	for result := range results {
@@ -370,6 +387,17 @@ func collectResults(results <-chan SimulationResult, stats *SimulationStats, tot
 			// Still count failed simulations as completed for monitoring purposes
 			atomic.AddInt64(&stats.CompletedSims, 1)
 			continue
+		}
+
+		// Export individual result if requested
+		if exportResults && result.GameID != "" {
+			go func(res SimulationResult) {
+				filename := filepath.Join(resultsDir, fmt.Sprintf("%s.json", res.GameID))
+				data, err := json.MarshalIndent(res, "", "  ")
+				if err == nil {
+					os.WriteFile(filename, data, 0644)
+				}
+			}(result)
 		}
 
 		// Update statistics for successful simulations

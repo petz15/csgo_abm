@@ -17,6 +17,7 @@ type SimulationConfig_v2 struct {
 	Team2Name      string
 	Team2Strategy  string
 	GameRules      string
+	ExportResults  bool
 }
 
 type SimulationStats_v2 struct {
@@ -35,35 +36,77 @@ type SimulationStats_v2 struct {
 }
 
 func sequentialsimulation(config SimulationConfig_v2) error {
-	// This function is a placeholder for sequential simulation logic
-	// It can be used to run simulations one after another without parallelism
-	// For now, it does nothing but can be expanded later
+	// Sequential simulation logic - runs simulations one after another without parallelism
 
 	starttime := time.Now()
 	stats := SimulationStats_v2{
 		TotalSimulations:  int64(config.NumSimulations),
 		ScoreDistribution: make(map[string]int64),
 	}
-	emptyString := ""
+
+	// Create results directory if exporting individual results
+	var resultsDir string
+	if config.ExportResults {
+		resultsDir = fmt.Sprintf("results_%s", time.Now().Format("20060102_150405"))
+		if err := os.MkdirAll(resultsDir, 0755); err != nil {
+			return fmt.Errorf("failed to create results directory: %v", err)
+		}
+		fmt.Printf("Sequential simulation with individual result export enabled\n")
+		fmt.Printf("Results will be saved to: %s/\n", resultsDir)
+		if config.NumSimulations > 10000 {
+			fmt.Printf("WARNING: Exporting %d individual results may create filesystem pressure\n", config.NumSimulations)
+		}
+	} else {
+		fmt.Println("Sequential simulation with summary-only mode")
+	}
+
+	fmt.Printf("Starting %d sequential simulations...\n", config.NumSimulations)
 
 	for i := 0; i < config.NumSimulations; i++ {
-		// Simulate a single game or task
-		// This could involve calling StartGame or similar functions
-		result, err := StartGameWithResults(config.Team1Name, config.Team1Strategy, config.Team2Name, config.Team2Strategy, config.GameRules, emptyString)
+		// Generate a simulation prefix for this run
+		simPrefix := fmt.Sprintf("seq_sim_%d_", i+1)
+
+		// Simulate a single game
+		result, err := StartGameWithResults(config.Team1Name, config.Team1Strategy, config.Team2Name, config.Team2Strategy, config.GameRules, simPrefix)
 		if err != nil {
-			return fmt.Errorf("failed to start game: %v", err)
+			fmt.Printf("Simulation %d failed: %v\n", i+1, err)
+			continue
 		}
+
+		// Export individual result if requested
+		if config.ExportResults && result.GameID != "" {
+			filename := fmt.Sprintf("%s/%s.json", resultsDir, result.GameID)
+			if resultData, err := json.MarshalIndent(result, "", "  "); err == nil {
+				os.WriteFile(filename, resultData, 0644)
+			}
+		}
+
 		updateglobalstats(&stats, result)
+
+		// Progress update for long runs
+		if config.NumSimulations > 100 && (i+1)%100 == 0 {
+			fmt.Printf("Progress: %d/%d simulations completed\n", i+1, config.NumSimulations)
+		}
 	}
 
 	endtime := time.Now()
-
 	stats.ExecutionTime = endtime.Sub(starttime)
 
 	// Show stats
-	simID := util.CreateGameID()
 	showstats(&stats)
-	exportSummary_v2(&stats, simID)
+
+	// Export summary
+	if config.ExportResults {
+		summaryPath := fmt.Sprintf("%s/simulation_summary.json", resultsDir)
+		exportSummary_v2(&stats, summaryPath)
+		fmt.Printf("\nResults exported to: %s/\n", resultsDir)
+		fmt.Printf("- Individual game results: %d JSON files\n", stats.CompletedSims)
+		fmt.Println("- Summary statistics: simulation_summary.json")
+	} else {
+		// Use original export method for single file
+		simID := util.CreateGameID()
+		exportSummary_v2(&stats, simID)
+	}
 
 	return nil
 }
@@ -121,8 +164,17 @@ func showstats(stats *SimulationStats_v2) {
 	fmt.Println(strings.Repeat("=", 60))
 }
 
-func exportSummary_v2(stats *SimulationStats_v2, simID string) error {
-	filename := fmt.Sprintf("%s_results.json", simID)
+func exportSummary_v2(stats *SimulationStats_v2, pathOrID string) error {
+	var filename string
+
+	// Check if pathOrID contains a path separator (indicates it's a full path)
+	if strings.Contains(pathOrID, "/") || strings.Contains(pathOrID, "\\") {
+		filename = pathOrID
+	} else {
+		// Original behavior - create filename from ID
+		filename = fmt.Sprintf("%s_results.json", pathOrID)
+	}
+
 	data, err := json.MarshalIndent(stats, "", "  ")
 	if err != nil {
 		return err

@@ -15,7 +15,8 @@ go.work
 
 #temp solution for the large directories being written. these do not need to be committed
 /cmd/results
-/results
+/results*
+results*/**
 
 # Python specific
 __pycache__/
