@@ -1,8 +1,13 @@
 package engine
 
 import (
+	"math"
 	"math/rand"
 )
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//CAUTION There is currently a max number of rounds in overtime set to 300 rounds
+//This is a temporary solution to prevent infinite loops in the game simulation.
 
 type Game struct {
 	ID             string
@@ -108,13 +113,19 @@ func (g *Game) GameFinished() {
 			g.GameinProgress = false
 			g.WinnerTeam = true // Team2 wins
 		}
-	} else if ((g.Score[0]-16)/g.OTcounter) > 4 && ((g.Score[1]-16)/g.OTcounter) > 4 && (g.Score[0]-g.Score[1]) > 2 {
+	} else if ((g.Score[0]-16)/g.OTcounter) > 4 && ((g.Score[1]-16)/g.OTcounter) > 4 && math.Abs(float64(g.Score[0]-g.Score[1])) > 2 {
 		g.GameinProgress = false
 		if g.Score[0] > g.Score[1] {
 			g.WinnerTeam = false // Team1 wins
 		} else {
 			g.WinnerTeam = true // Team2 wins
 		}
+		//CAUTION WITH THE NEXT PART, THIS DEFINES THE MAXIMUM NUMBER OF ROUNDS IN OVERTIME
+	} else if g.OTcounter > 300 {
+		// If the game has gone on for too long, end it
+		//TODO: this needs to be handled better and remebered!!
+		g.GameinProgress = false
+		g.WinnerTeam = rand.Intn(2) == 0 // Randomly decide a winner
 	}
 }
 

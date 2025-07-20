@@ -2,20 +2,27 @@ package main
 
 import (
 	"CSGO_ABM/internal/engine"
-	"CSGO_ABM/output"
-	"crypto/rand"
+	"CSGO_ABM/util"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-	"time"
 )
 
-// StartGame initializes and runs a single game simulation
+// GameResult holds the essential results from a game simulation
+type GameResult struct {
+	GameID         string
+	Team1Won       bool
+	Team1Score     int
+	Team2Score     int
+	TotalRounds    int
+	WentToOvertime bool
+}
+
+// StartGame initializes and runs a single game simulation (legacy function for single simulations)
 func StartGame(team1Name string, team1Strategy string, team2Name string, team2Strategy string,
 	gameRules string, simPrefix string) string {
 
-	ID := createGameID()
+	ID := util.CreateGameID()
 	if simPrefix != "" {
 		ID = simPrefix + ID
 	}
@@ -32,7 +39,7 @@ func StartGame(team1Name string, team1Strategy string, team2Name string, team2St
 
 	// Export the results to JSON
 	resultsPath := filepath.Join(resultsDir, ID+".json")
-	err := output.ExportResultsToJSON(game, resultsPath)
+	err := util.ExportResultsToJSON(game, resultsPath)
 	if err != nil {
 		fmt.Printf("Error exporting results: %v\n", err)
 	}
@@ -43,35 +50,75 @@ func StartGame(team1Name string, team1Strategy string, team2Name string, team2St
 	return ID
 }
 
-// createGameID creates a unique identifier for a game session
-func createGameID() string {
-	// Get the hostname
-	hostname := "host"
-	name, err := os.Hostname()
-	if err == nil {
-		hostname = name
+// StartGameWithResults runs a simulation and returns the results directly (optimized for parallel simulations)
+func StartGameWithResults(team1Name string, team1Strategy string, team2Name string, team2Strategy string,
+	gameRules string, simPrefix string) (*GameResult, error) {
+
+	ID := util.CreateGameID()
+	if simPrefix != "" {
+		ID = simPrefix + ID
 	}
 
-	// Generate random component
-	uniqueID := generateRandomString(4)
+	// Create a new game instance
+	game := engine.NewGame(ID, team1Name, team1Strategy, team2Name, team2Strategy, gameRules)
 
-	// Format: YYYYMMDD_HHMMSS_hostname_randomID
-	ID := time.Now().Format("20060102_150405") + "_" + hostname + "_" + uniqueID
+	// Start the simulation
+	game.Start()
 
-	return ID
+	// Extract results directly from the game object
+	result := &GameResult{
+		GameID:         ID,
+		Team1Won:       !game.WinnerTeam, // WinnerTeam is false if Team1 wins
+		Team1Score:     game.Score[0],
+		Team2Score:     game.Score[1],
+		TotalRounds:    len(game.Rounds),
+		WentToOvertime: game.OT,
+	}
+
+	// Explicitly clear game to help with garbage collection
+	game = nil
+
+	return result, nil
 }
 
-// generateRandomString generates a random string of specified length
-func generateRandomString(max int) string {
-	table := [...]byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
+// StartGameWithResultsAndExport runs a simulation, returns results directly, and optionally exports to JSON
+func StartGameWithResultsAndExport(team1Name string, team1Strategy string, team2Name string, team2Strategy string,
+	gameRules string, simPrefix string, exportJSON bool) (*GameResult, error) {
 
-	b := make([]byte, max)
-	n, err := io.ReadAtLeast(rand.Reader, b, max)
-	if n != max {
-		panic(err)
+	ID := util.CreateGameID()
+	if simPrefix != "" {
+		ID = simPrefix + ID
 	}
-	for i := 0; i < len(b); i++ {
-		b[i] = table[int(b[i])%len(table)]
+
+	// Create a new game instance
+	game := engine.NewGame(ID, team1Name, team1Strategy, team2Name, team2Strategy, gameRules)
+
+	// Start the simulation
+	game.Start()
+
+	// Extract results directly from the game object
+	result := &GameResult{
+		GameID:         ID,
+		Team1Won:       !game.WinnerTeam, // WinnerTeam is false if Team1 wins
+		Team1Score:     game.Score[0],
+		Team2Score:     game.Score[1],
+		TotalRounds:    len(game.Rounds),
+		WentToOvertime: game.OT,
 	}
-	return string(b)
+
+	// Optionally export to JSON for debugging/analysis
+	if exportJSON {
+		resultsDir := "results"
+		os.MkdirAll(resultsDir, 0755)
+		resultsPath := filepath.Join(resultsDir, ID+".json")
+		err := util.ExportResultsToJSON(game, resultsPath)
+		if err != nil {
+			fmt.Printf("Warning: Error exporting results for %s: %v\n", ID, err)
+		}
+	}
+
+	// Explicitly clear game to help with garbage collection
+	game = nil
+
+	return result, nil
 }

@@ -11,17 +11,16 @@ func main() {
 	config := struct {
 		NumSimulations int
 		MaxConcurrent  int
-		BatchSize      int
 		MemoryLimit    int
 		Team1Name      string
 		Team1Strategy  string
 		Team2Name      string
 		Team2Strategy  string
 		GameRules      string
+		Sequential     bool
 	}{
 		NumSimulations: 1, // Default to single simulation
 		MaxConcurrent:  runtime.NumCPU(),
-		BatchSize:      100,  // Process in batches to manage memory usage
 		MemoryLimit:    1000, // Maximum memory usage before GC (MB)
 		Team1Name:      "Team A",
 		Team1Strategy:  "all_in",
@@ -39,14 +38,11 @@ func main() {
 				fmt.Sscanf(args[i+1], "%d", &config.NumSimulations)
 				i++
 			}
+		case "-s", "--sequential":
+			config.Sequential = true
 		case "-c", "--cores":
 			if i+1 < len(args) {
 				fmt.Sscanf(args[i+1], "%d", &config.MaxConcurrent)
-				i++
-			}
-		case "-b", "--batch":
-			if i+1 < len(args) {
-				fmt.Sscanf(args[i+1], "%d", &config.BatchSize)
 				i++
 			}
 		case "-m", "--memory":
@@ -83,12 +79,25 @@ func main() {
 			"",
 		)
 		fmt.Printf("Simulation completed. Game ID: %s\n", gameID)
+	} else if config.Sequential {
+		// Sequential simulations mode
+		err := sequentialsimulation(SimulationConfig_v2{
+			NumSimulations: config.NumSimulations,
+			Team1Name:      config.Team1Name,
+			Team1Strategy:  config.Team1Strategy,
+			Team2Name:      config.Team2Name,
+			Team2Strategy:  config.Team2Strategy,
+			GameRules:      config.GameRules,
+		})
+		if err != nil {
+			fmt.Printf("Error running sequential simulations: %v\n", err)
+			os.Exit(1)
+		}
 	} else {
 		// Multiple simulations mode
 		err := RunParallelSimulations(SimulationConfig{
 			NumSimulations: config.NumSimulations,
 			MaxConcurrent:  config.MaxConcurrent,
-			BatchSize:      config.BatchSize,
 			MemoryLimit:    config.MemoryLimit,
 			Team1Name:      config.Team1Name,
 			Team1Strategy:  config.Team1Strategy,
@@ -108,7 +117,6 @@ func printUsage() {
 	fmt.Println("CS:GO Economy Simulation Usage:")
 	fmt.Println("  -n, --num <number>     Number of simulations to run (default: 1)")
 	fmt.Println("  -c, --cores <number>   Number of concurrent simulations (default: number of CPU cores)")
-	fmt.Println("  -b, --batch <number>   Batch size for memory management (default: 100)")
 	fmt.Println("  -m, --memory <number>  Memory limit in MB before forcing GC (default: 1000)")
 	fmt.Println("  -t1, --team1 <strategy> Team 1 strategy (default: all_in)")
 	fmt.Println("  -t2, --team2 <strategy> Team 2 strategy (default: default_half)")
@@ -121,8 +129,15 @@ func printUsage() {
 	fmt.Println("  go run ./cmd")
 	fmt.Println("  # Run 100 simulations using 8 cores")
 	fmt.Println("  go run ./cmd -n 100 -c 8")
-	fmt.Println("  # Run 2000 simulations with optimized memory settings")
-	fmt.Println("  go run ./cmd -n 2000 -c 4 -m 500")
-	fmt.Println("  # Run 5000 simulations with memory-efficient settings")
-	fmt.Println("  go run ./cmd -n 5000 -c 2 -m 250")
+	fmt.Println("  # Run 10,000 simulations with optimized memory settings")
+	fmt.Println("  go run ./cmd -n 10000 -c 4 -m 500")
+	fmt.Println("  # Run 100,000 simulations with memory-efficient settings")
+	fmt.Println("  go run ./cmd -n 100000 -c 4 -m 1000")
+	fmt.Println("  # Run 1,000,000 simulations (use lower concurrent workers for stability)")
+	fmt.Println("  go run ./cmd -n 1000000 -c 2 -m 2000")
+	fmt.Println("\nLarge-scale simulation recommendations:")
+	fmt.Println("  - For 100K+ simulations: Use 4 or fewer cores to avoid memory pressure")
+	fmt.Println("  - For 1M+ simulations: Use 2-4 cores with 2GB+ memory limit")
+	fmt.Println("  - Monitor system resources during long-running simulations")
+	fmt.Println("  - Results are processed directly in memory for optimal performance")
 }
