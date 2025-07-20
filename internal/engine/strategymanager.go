@@ -17,6 +17,10 @@ func CallStrategy(team *Team, curround int, curscoreopo int) float64 {
 		return models.InvestDecisionMaking_half(team.Funds, curround, curscoreopo)
 	case "adaptive_eco_v1":
 		return models.InvestDecisionMaking_adaptive_v1(team.Funds, curround, curscoreopo)
+	case "yolo":
+		return models.InvestDecisionMaking_yolo(team.Funds, curround, curscoreopo)
+	case "scrooge":
+		return models.InvestDecisionMaking_scrooge(team.Funds, curround, curscoreopo)
 	default:
 		return models.InvestDecisionMaking_allin(team.Funds)
 	}
