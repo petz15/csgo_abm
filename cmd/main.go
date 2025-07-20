@@ -1,30 +1,32 @@
 package main
 
 import (
+	"CSGO_ABM/internal/analysis"
 	"fmt"
 	"math"
 	"os"
 	"runtime"
-
-	"CSGO_ABM/internal/analysis"
+	"time"
 )
 
 func main() {
 	// Default configuration using unified analysis package
 	config := analysis.SimulationConfig{
-		NumSimulations: 1,                                               // Default to single simulation
-		MaxConcurrent:  int(math.Max(1, float64(runtime.NumCPU())*0.8)), // Use 80% of available CPU cores
-		MemoryLimit:    3000,                                            // Maximum memory usage before GC (MB)
-		Team1Name:      "Team A",
-		Team1Strategy:  "all_in",
-		Team2Name:      "Team B",
-		Team2Strategy:  "default_half",
-		GameRules:      "default",
-		Sequential:     false, // Default to parallel simulations
-		ExportResults:  false, // Default to not export individual results
+		NumSimulations:        1,                                               // Default to single simulation
+		MaxConcurrent:         int(math.Max(1, float64(runtime.NumCPU())*0.8)), // Use 80% of available CPU cores
+		MemoryLimit:           3000,                                            // Maximum memory usage before GC (MB)
+		Team1Name:             "Team A",
+		Team1Strategy:         "all_in",
+		Team2Name:             "Team B",
+		Team2Strategy:         "default_half",
+		GameRules:             "default",
+		Sequential:            false, // Default to parallel simulations
+		ExportDetailedResults: false, // Default to not export individual results
+		Exportpath:            "",    // Will be set after parsing args
 	}
 
-	// Parse command line arguments
+	// Parse command line arguments first to check for custom output path
+	customOutputPath := ""
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -36,7 +38,7 @@ func main() {
 		case "-s", "--sequential":
 			config.Sequential = true
 		case "-e", "--export":
-			config.ExportResults = true
+			config.ExportDetailedResults = true
 		case "-c", "--cores":
 			if i+1 < len(args) {
 				fmt.Sscanf(args[i+1], "%d", &config.MaxConcurrent)
@@ -57,10 +59,28 @@ func main() {
 				config.Team2Strategy = args[i+1]
 				i++
 			}
+		case "-o", "--output":
+			if i+1 < len(args) {
+				customOutputPath = args[i+1]
+				i++
+			}
 		case "-h", "--help":
 			printUsage()
 			return
 		}
+	}
+
+	// Set the results directory - use custom path if specified, otherwise create timestamped directory
+	if customOutputPath != "" {
+		config.Exportpath = customOutputPath
+	} else {
+		config.Exportpath = fmt.Sprintf("results_%s", time.Now().Format("20060102_150405"))
+	}
+
+	// Create the results directory
+	if err := os.MkdirAll(config.Exportpath, 0755); err != nil {
+		fmt.Printf("Error creating results directory: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Run simulation(s)
@@ -101,6 +121,7 @@ func printUsage() {
 	fmt.Println("  -m, --memory <number>  Memory limit in MB before forcing GC (default: 3000)")
 	fmt.Println("  -s, --sequential       Run simulations sequentially instead of in parallel")
 	fmt.Println("  -e, --export           Export individual game results as JSON files (works with both modes)")
+	fmt.Println("  -o, --output <path>    Results output directory (default: results_YYYYMMDD_HHMMSS)")
 	fmt.Println("  -t1, --team1 <strategy> Team 1 strategy (default: all_in)")
 	fmt.Println("  -t2, --team2 <strategy> Team 2 strategy (default: default_half)")
 	fmt.Println("  -h, --help             Print this help message")
@@ -114,8 +135,8 @@ func printUsage() {
 	fmt.Println("  go run ./cmd -n 100 -c 8")
 	fmt.Println("  # Run 1000 simulations with individual result export")
 	fmt.Println("  go run ./cmd -n 1000 -c 4 -e")
-	fmt.Println("  # Run 500 simulations sequentially with result export")
-	fmt.Println("  go run ./cmd -n 500 -s -e")
+	fmt.Println("  # Run 500 simulations sequentially with result export to custom folder")
+	fmt.Println("  go run ./cmd -n 500 -s -e -o my_results")
 	fmt.Println("  # Run 10,000 simulations with optimized memory settings")
 	fmt.Println("  go run ./cmd -n 10000 -c 4 -m 500")
 	fmt.Println("  # Run 100,000 simulations with memory-efficient settings")
@@ -125,8 +146,8 @@ func printUsage() {
 	fmt.Println("\nResult Export Options:")
 	fmt.Println("  # Export individual results in parallel mode")
 	fmt.Println("  go run ./cmd -n 100 -e")
-	fmt.Println("  # Export individual results in sequential mode")
-	fmt.Println("  go run ./cmd -n 100 -s -e")
+	fmt.Println("  # Export individual results to custom directory")
+	fmt.Println("  go run ./cmd -n 100 -s -e -o custom_output")
 	fmt.Println("  # Summary-only mode (default, recommended for large simulations)")
 	fmt.Println("  go run ./cmd -n 10000")
 	fmt.Println("\nLarge-scale simulation recommendations:")

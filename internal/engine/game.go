@@ -113,7 +113,7 @@ func (g *Game) GameFinished() {
 			g.GameinProgress = false
 			g.WinnerTeam = true // Team2 wins
 		}
-	} else if ((g.Score[0]-16)/g.OTcounter) > 4 && ((g.Score[1]-16)/g.OTcounter) > 4 && math.Abs(float64(g.Score[0]-g.Score[1])) > 2 {
+	} else if ((g.Score[0]-16)/g.OTcounter) > 4 && ((g.Score[1]-16)/g.OTcounter) > 4 && math.Abs(float64(g.Score[0]-g.Score[1])) >= 2 {
 		g.GameinProgress = false
 		if g.Score[0] > g.Score[1] {
 			g.WinnerTeam = false // Team1 wins

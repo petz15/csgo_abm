@@ -50,40 +50,9 @@ func StartGame(team1Name string, team1Strategy string, team2Name string, team2St
 	return ID
 }
 
-// StartGameWithResults runs a simulation and returns the results directly (optimized for parallel simulations)
-func StartGameWithResults(team1Name string, team1Strategy string, team2Name string, team2Strategy string,
-	gameRules string, simPrefix string) (*GameResult, error) {
-
-	ID := util.CreateGameID()
-	if simPrefix != "" {
-		ID = simPrefix + ID
-	}
-
-	// Create a new game instance
-	game := engine.NewGame(ID, team1Name, team1Strategy, team2Name, team2Strategy, gameRules)
-
-	// Start the simulation
-	game.Start()
-
-	// Extract results directly from the game object
-	result := &GameResult{
-		GameID:         ID,
-		Team1Won:       !game.WinnerTeam, // WinnerTeam is false if Team1 wins
-		Team1Score:     game.Score[0],
-		Team2Score:     game.Score[1],
-		TotalRounds:    len(game.Rounds),
-		WentToOvertime: game.OT,
-	}
-
-	// Explicitly clear game to help with garbage collection
-	game = nil
-
-	return result, nil
-}
-
 // StartGameWithResultsAndExport runs a simulation, returns results directly, and optionally exports to JSON
 func StartGameWithResultsAndExport(team1Name string, team1Strategy string, team2Name string, team2Strategy string,
-	gameRules string, simPrefix string, exportJSON bool) (*GameResult, error) {
+	gameRules string, simPrefix string, exportJSON bool, exportpath string) (*GameResult, error) {
 
 	ID := util.CreateGameID()
 	if simPrefix != "" {
@@ -108,12 +77,12 @@ func StartGameWithResultsAndExport(team1Name string, team1Strategy string, team2
 
 	// Optionally export to JSON for debugging/analysis
 	if exportJSON {
-		resultsDir := "results"
+		resultsDir := exportpath
 		os.MkdirAll(resultsDir, 0755)
 		resultsPath := filepath.Join(resultsDir, ID+".json")
 		err := util.ExportResultsToJSON(game, resultsPath)
 		if err != nil {
-			fmt.Printf("Warning: Error exporting results for %s: %v\n", ID, err)
+			fmt.Printf("Warning: Error exporting detailed results for %s: %v\n", ID, err)
 		}
 	}
 

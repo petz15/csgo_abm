@@ -1,6 +1,7 @@
 package main
 
 import (
+	"CSGO_ABM/internal/analysis"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,8 +11,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"CSGO_ABM/internal/analysis"
 )
 
 // SimulationResult holds the result of a single simulation
@@ -131,13 +130,15 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 		}()
 
 		// Run the simulation and get results directly
-		gameResult, err := StartGameWithResults(
+		gameResult, err := StartGameWithResultsAndExport(
 			job.Config.Team1Name,
 			job.Config.Team1Strategy,
 			job.Config.Team2Name,
 			job.Config.Team2Strategy,
 			job.Config.GameRules,
 			simPrefix,
+			job.Config.ExportDetailedResults,
+			job.Config.Exportpath,
 		)
 
 		var result SimulationResult
@@ -176,42 +177,31 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 			Error:  fmt.Errorf("simulation timed out after 5 minutes"),
 		}
 	}
-} // RunParallelSimulations orchestrates the execution of multiple simulations
+}
+
+// RunParallelSimulations orchestrates the execution of multiple simulations
 func RunParallelSimulations(config analysis.SimulationConfig) error {
 	startTime := time.Now()
 
-	// Optimize settings for very large simulations
-	if config.NumSimulations >= 100000 {
-		// For very large simulations, reduce memory pressure
-		if config.MemoryLimit > 2000 {
-			config.MemoryLimit = 2000
-		}
-	}
-
 	// Initialize statistics
 	stats := analysis.NewSimulationStats(analysis.SimulationConfig{
-		NumSimulations: config.NumSimulations,
-		Team1Name:      config.Team1Name,
-		Team2Name:      config.Team2Name,
-		Team1Strategy:  config.Team1Strategy,
-		Team2Strategy:  config.Team2Strategy,
-		GameRules:      config.GameRules,
-		ExportResults:  config.ExportResults,
-		Sequential:     false, // This is concurrent mode
+		NumSimulations:        config.NumSimulations,
+		Team1Name:             config.Team1Name,
+		Team2Name:             config.Team2Name,
+		Team1Strategy:         config.Team1Strategy,
+		Team2Strategy:         config.Team2Strategy,
+		GameRules:             config.GameRules,
+		ExportDetailedResults: config.ExportDetailedResults,
+		Sequential:            false,             // This is concurrent mode
+		Exportpath:            config.Exportpath, // Use the export path from main config
 	})
-
-	// Create results directory
-	resultsDir := fmt.Sprintf("results_%s", time.Now().Format("20060102_150405"))
-	if err := os.MkdirAll(resultsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create results directory: %v", err)
-	}
 
 	fmt.Printf("Starting %d simulations with %d concurrent workers...\n",
 		config.NumSimulations, config.MaxConcurrent)
 	fmt.Printf("Memory limit: %d MB\n", config.MemoryLimit)
 
-	if config.ExportResults {
-		fmt.Printf("Individual result export: ENABLED (results will be saved to %s/)\n", resultsDir)
+	if config.ExportDetailedResults {
+		fmt.Printf("Individual result export: ENABLED (results will be saved to %s/)\n", config.Exportpath)
 		if config.NumSimulations > 10000 {
 			fmt.Printf("WARNING: Exporting %d individual results may create filesystem pressure\n", config.NumSimulations)
 		}
@@ -231,7 +221,7 @@ func RunParallelSimulations(config analysis.SimulationConfig) error {
 	resultsDone := make(chan bool)
 	go func() {
 		defer close(resultsDone)
-		collectResults(pool.results, stats, config.NumSimulations, config.ExportResults, resultsDir)
+		collectResults(pool.results, stats, config.NumSimulations)
 	}()
 
 	// Track memory usage
@@ -243,10 +233,10 @@ func RunParallelSimulations(config analysis.SimulationConfig) error {
 
 	// Progress reporter
 	progressDone := make(chan bool)
-	progressInterval := 30 * time.Second
-	// For very large simulations, report progress more frequently
+	progressInterval := 10 * time.Second
+	// For very large simulations, report progress less frequently
 	if config.NumSimulations >= 100000 {
-		progressInterval = 10 * time.Second
+		progressInterval = 30 * time.Second
 	}
 	go func() {
 		defer close(progressDone)
@@ -321,7 +311,7 @@ func RunParallelSimulations(config analysis.SimulationConfig) error {
 	}
 
 	// Export summary statistics
-	summaryPath := filepath.Join(resultsDir, "simulation_summary.json")
+	summaryPath := filepath.Join(config.Exportpath, "simulation_summary.json")
 	if err := exportSummary(stats, summaryPath); err != nil {
 		fmt.Printf("Warning: Failed to export summary: %v\n", err)
 	}
@@ -330,15 +320,15 @@ func RunParallelSimulations(config analysis.SimulationConfig) error {
 	analysis.PrintEnhancedStats(stats)
 
 	// Print export information
-	fmt.Printf("\nResults exported to: %s/\n", resultsDir)
-	if config.ExportResults {
+	fmt.Printf("\nResults exported to: %s/\n", config.Exportpath)
+	if config.ExportDetailedResults {
 		fmt.Printf("- Individual game results: %d JSON files\n", atomic.LoadInt64(&stats.CompletedSims))
 	}
 	fmt.Println("- Summary statistics: simulation_summary.json")
 
 	return nil
 } // collectResults processes simulation results and updates statistics
-func collectResults(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int, exportResults bool, resultsDir string) {
+func collectResults(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int) {
 	processedCount := int64(0)
 
 	for result := range results {
@@ -349,17 +339,6 @@ func collectResults(results <-chan SimulationResult, stats *analysis.SimulationS
 			// Count failed simulations
 			stats.UpdateFailedSimulation()
 			continue
-		}
-
-		// Export individual result if requested
-		if exportResults && result.GameID != "" {
-			go func(res SimulationResult) {
-				filename := filepath.Join(resultsDir, fmt.Sprintf("%s.json", res.GameID))
-				data, err := json.MarshalIndent(res, "", "  ")
-				if err == nil {
-					os.WriteFile(filename, data, 0644)
-				}
-			}(result)
 		}
 
 		// Update statistics for successful simulations
