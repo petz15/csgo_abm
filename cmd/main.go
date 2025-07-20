@@ -5,22 +5,13 @@ import (
 	"math"
 	"os"
 	"runtime"
+
+	"CSGO_ABM/internal/analysis"
 )
 
 func main() {
-	// Default configuration
-	config := struct {
-		NumSimulations int
-		MaxConcurrent  int
-		MemoryLimit    int
-		Team1Name      string
-		Team1Strategy  string
-		Team2Name      string
-		Team2Strategy  string
-		GameRules      string
-		Sequential     bool
-		ExportResults  bool
-	}{
+	// Default configuration using unified analysis package
+	config := analysis.SimulationConfig{
 		NumSimulations: 1,                                               // Default to single simulation
 		MaxConcurrent:  int(math.Max(1, float64(runtime.NumCPU())*0.8)), // Use 80% of available CPU cores
 		MemoryLimit:    3000,                                            // Maximum memory usage before GC (MB)
@@ -87,32 +78,14 @@ func main() {
 		fmt.Printf("Simulation completed. Game ID: %s\n", gameID)
 	} else if config.Sequential {
 		// Sequential simulations mode
-		err := sequentialsimulation(SimulationConfig_v2{
-			NumSimulations: config.NumSimulations,
-			Team1Name:      config.Team1Name,
-			Team1Strategy:  config.Team1Strategy,
-			Team2Name:      config.Team2Name,
-			Team2Strategy:  config.Team2Strategy,
-			GameRules:      config.GameRules,
-			ExportResults:  config.ExportResults,
-		})
+		err := sequentialsimulation(config)
 		if err != nil {
 			fmt.Printf("Error running sequential simulations: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
 		// Multiple simulations mode
-		err := RunParallelSimulations(SimulationConfig{
-			NumSimulations: config.NumSimulations,
-			MaxConcurrent:  config.MaxConcurrent,
-			MemoryLimit:    config.MemoryLimit,
-			Team1Name:      config.Team1Name,
-			Team1Strategy:  config.Team1Strategy,
-			Team2Name:      config.Team2Name,
-			Team2Strategy:  config.Team2Strategy,
-			GameRules:      config.GameRules,
-			ExportResults:  config.ExportResults,
-		})
+		err := RunParallelSimulations(config)
 		if err != nil {
 			fmt.Printf("Error running parallel simulations: %v\n", err)
 			os.Exit(1)

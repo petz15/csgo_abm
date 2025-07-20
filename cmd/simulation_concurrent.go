@@ -7,44 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"CSGO_ABM/internal/analysis"
 )
-
-// SimulationConfig holds configuration for parallel simulations
-type SimulationConfig struct {
-	NumSimulations int
-	MaxConcurrent  int
-	MemoryLimit    int // Memory limit in MB before forcing GC
-	Team1Name      string
-	Team1Strategy  string
-	Team2Name      string
-	Team2Strategy  string
-	GameRules      string
-	ExportResults  bool // Whether to export individual game results
-}
-
-// SimulationStats tracks statistics across all simulations
-type SimulationStats struct {
-	TotalSimulations  int64            `json:"total_simulations"`
-	CompletedSims     int64            `json:"completed_simulations"`
-	Team1Wins         int64            `json:"team1_wins"`
-	Team2Wins         int64            `json:"team2_wins"`
-	TotalRounds       int64            `json:"total_rounds"`
-	OvertimeGames     int64            `json:"overtime_games"`
-	AverageRounds     float64          `json:"average_rounds"`
-	Team1WinRate      float64          `json:"team1_win_rate"`
-	Team2WinRate      float64          `json:"team2_win_rate"`
-	OvertimeRate      float64          `json:"overtime_rate"`
-	ExecutionTime     time.Duration    `json:"execution_time"`
-	ScoreDistribution map[string]int64 `json:"score_distribution"`
-	ProcessingRate    float64          `json:"simulations_per_second"`
-	PeakMemoryUsage   uint64           `json:"peak_memory_usage_mb"`
-	TotalGCRuns       uint32           `json:"total_gc_runs"`
-	scoreMutex        sync.Mutex       // Protects ScoreDistribution map
-}
 
 // SimulationResult holds the result of a single simulation
 type SimulationResult struct {
@@ -65,17 +33,17 @@ type WorkerPool struct {
 	wg      sync.WaitGroup
 	ctx     context.Context
 	cancel  context.CancelFunc
-	stats   *SimulationStats
+	stats   *analysis.SimulationStats
 }
 
 // SimulationJob represents a single simulation job
 type SimulationJob struct {
 	SimID  int
-	Config SimulationConfig
+	Config analysis.SimulationConfig
 }
 
 // NewWorkerPool creates a new worker pool
-func NewWorkerPool(workers int, stats *SimulationStats) *WorkerPool {
+func NewWorkerPool(workers int, stats *analysis.SimulationStats) *WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &WorkerPool{
 		workers: workers,
@@ -209,7 +177,7 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 		}
 	}
 } // RunParallelSimulations orchestrates the execution of multiple simulations
-func RunParallelSimulations(config SimulationConfig) error {
+func RunParallelSimulations(config analysis.SimulationConfig) error {
 	startTime := time.Now()
 
 	// Optimize settings for very large simulations
@@ -221,10 +189,16 @@ func RunParallelSimulations(config SimulationConfig) error {
 	}
 
 	// Initialize statistics
-	stats := &SimulationStats{
-		TotalSimulations:  int64(config.NumSimulations),
-		ScoreDistribution: make(map[string]int64),
-	}
+	stats := analysis.NewSimulationStats(analysis.SimulationConfig{
+		NumSimulations: config.NumSimulations,
+		Team1Name:      config.Team1Name,
+		Team2Name:      config.Team2Name,
+		Team1Strategy:  config.Team1Strategy,
+		Team2Strategy:  config.Team2Strategy,
+		GameRules:      config.GameRules,
+		ExportResults:  config.ExportResults,
+		Sequential:     false, // This is concurrent mode
+	})
 
 	// Create results directory
 	resultsDir := fmt.Sprintf("results_%s", time.Now().Format("20060102_150405"))
@@ -325,21 +299,9 @@ func RunParallelSimulations(config SimulationConfig) error {
 		fmt.Println("Warning: Timeout waiting for progress reporter")
 	}
 
-	// Calculate final statistics with atomic reads
+	// Calculate final statistics using unified analysis package
 	stats.ExecutionTime = time.Since(startTime)
-	completedSims := atomic.LoadInt64(&stats.CompletedSims)
-	if completedSims > 0 {
-		team1Wins := atomic.LoadInt64(&stats.Team1Wins)
-		team2Wins := atomic.LoadInt64(&stats.Team2Wins)
-		overtimeGames := atomic.LoadInt64(&stats.OvertimeGames)
-		totalRounds := atomic.LoadInt64(&stats.TotalRounds)
-
-		stats.Team1WinRate = float64(team1Wins) / float64(completedSims) * 100
-		stats.Team2WinRate = float64(team2Wins) / float64(completedSims) * 100
-		stats.OvertimeRate = float64(overtimeGames) / float64(completedSims) * 100
-		stats.AverageRounds = float64(totalRounds) / float64(completedSims)
-		stats.ProcessingRate = float64(completedSims) / stats.ExecutionTime.Seconds()
-	}
+	stats.CalculateFinalStats()
 
 	// Final garbage collection and memory stats
 	runtime.GC()
@@ -365,7 +327,7 @@ func RunParallelSimulations(config SimulationConfig) error {
 	}
 
 	// Print final results
-	printFinalStats(stats)
+	analysis.PrintEnhancedStats(stats)
 
 	// Print export information
 	fmt.Printf("\nResults exported to: %s/\n", resultsDir)
@@ -376,7 +338,7 @@ func RunParallelSimulations(config SimulationConfig) error {
 
 	return nil
 } // collectResults processes simulation results and updates statistics
-func collectResults(results <-chan SimulationResult, stats *SimulationStats, totalSims int, exportResults bool, resultsDir string) {
+func collectResults(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int, exportResults bool, resultsDir string) {
 	processedCount := int64(0)
 
 	for result := range results {
@@ -384,8 +346,8 @@ func collectResults(results <-chan SimulationResult, stats *SimulationStats, tot
 
 		if result.Error != nil {
 			fmt.Printf("Simulation %s failed: %v\n", result.GameID, result.Error)
-			// Still count failed simulations as completed for monitoring purposes
-			atomic.AddInt64(&stats.CompletedSims, 1)
+			// Count failed simulations
+			stats.UpdateFailedSimulation()
 			continue
 		}
 
@@ -401,32 +363,19 @@ func collectResults(results <-chan SimulationResult, stats *SimulationStats, tot
 		}
 
 		// Update statistics for successful simulations
-		atomic.AddInt64(&stats.CompletedSims, 1)
-		atomic.AddInt64(&stats.TotalRounds, int64(result.TotalRounds))
-
-		if result.Team1Won {
-			atomic.AddInt64(&stats.Team1Wins, 1)
-		} else {
-			atomic.AddInt64(&stats.Team2Wins, 1)
-		}
-
-		if result.WentToOvertime {
-			atomic.AddInt64(&stats.OvertimeGames, 1)
-		}
-
-		// Update score distribution with bounds checking to prevent unlimited growth
-		scoreKey := fmt.Sprintf("%d-%d", result.Team1Score, result.Team2Score)
-		stats.scoreMutex.Lock()
-		// Limit score distribution to prevent memory issues
-		if len(stats.ScoreDistribution) < 1000 || stats.ScoreDistribution[scoreKey] > 0 {
-			stats.ScoreDistribution[scoreKey]++
-		}
-		stats.scoreMutex.Unlock()
+		stats.UpdateGameResult(
+			result.Team1Won,
+			result.Team1Score,
+			result.Team2Score,
+			result.TotalRounds,
+			result.WentToOvertime,
+			0, // responseTime - not tracked in current implementation
+		)
 	}
 }
 
 // monitorMemoryUsageWithContext monitors memory usage and forces GC when needed
-func monitorMemoryUsageWithContext(ctx context.Context, stats *SimulationStats, memoryLimit int) {
+func monitorMemoryUsageWithContext(ctx context.Context, stats *analysis.SimulationStats, memoryLimit int) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -466,7 +415,7 @@ func monitorMemoryUsageWithContext(ctx context.Context, stats *SimulationStats, 
 }
 
 // reportProgressWithContext periodically reports simulation progress
-func reportProgressWithContext(ctx context.Context, stats *SimulationStats, totalSims int, startTime time.Time, interval time.Duration) {
+func reportProgressWithContext(ctx context.Context, stats *analysis.SimulationStats, totalSims int, startTime time.Time, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -493,44 +442,11 @@ func reportProgressWithContext(ctx context.Context, stats *SimulationStats, tota
 }
 
 // exportSummary exports simulation statistics to JSON
-func exportSummary(stats *SimulationStats, path string) error {
+func exportSummary(stats *analysis.SimulationStats, path string) error {
 	data, err := json.MarshalIndent(stats, "", "  ")
 	if err != nil {
 		return err
 	}
 
 	return os.WriteFile(path, data, 0644)
-}
-
-// printFinalStats prints final simulation statistics
-func printFinalStats(stats *SimulationStats) {
-	fmt.Println("\n" + strings.Repeat("=", 60))
-	fmt.Println("SIMULATION RESULTS SUMMARY")
-	fmt.Println(strings.Repeat("=", 60))
-	fmt.Printf("Total Simulations: %d\n", stats.CompletedSims)
-	fmt.Printf("Execution Time: %s\n", stats.ExecutionTime.Round(time.Second))
-	fmt.Printf("Processing Rate: %.1f simulations/second\n", stats.ProcessingRate)
-	fmt.Printf("Peak Memory Usage: %d MB\n", stats.PeakMemoryUsage)
-	fmt.Printf("Total GC Runs: %d\n", stats.TotalGCRuns)
-	fmt.Println()
-	fmt.Printf("Team 1 Wins: %d (%.1f%%)\n", stats.Team1Wins, stats.Team1WinRate)
-	fmt.Printf("Team 2 Wins: %d (%.1f%%)\n", stats.Team2Wins, stats.Team2WinRate)
-	fmt.Printf("Average Rounds per Game: %.1f\n", stats.AverageRounds)
-	fmt.Printf("Overtime Rate: %.1f%%\n", stats.OvertimeRate)
-
-	if len(stats.ScoreDistribution) > 0 {
-		fmt.Println("\nTop Score Distributions:")
-		// Print top 5 most common scores
-		// This is a simplified display - in production you might want to sort properly
-		count := 0
-		for score, freq := range stats.ScoreDistribution {
-			if count >= 5 {
-				break
-			}
-			percentage := float64(freq) / float64(stats.CompletedSims) * 100
-			fmt.Printf("  %s: %d games (%.1f%%)\n", score, freq, percentage)
-			count++
-		}
-	}
-	fmt.Println(strings.Repeat("=", 60))
 }
