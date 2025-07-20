@@ -6,7 +6,7 @@ import (
 )
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//CAUTION There is currently a max number of rounds in overtime set to 300 rounds
+//CAUTION There is currently a max number of overtime set to 300. Meaning an overtime can have max 15 * 2 + 300 * 6= 1830 rounds.
 //This is a temporary solution to prevent infinite loops in the game simulation.
 
 type Game struct {
