@@ -37,6 +37,9 @@ func StartGame(team1Name string, team1Strategy string, team2Name string, team2St
 		fmt.Printf("Error exporting results: %v\n", err)
 	}
 
+	// Explicitly clear game to help with garbage collection
+	game = nil
+
 	return ID
 }
 

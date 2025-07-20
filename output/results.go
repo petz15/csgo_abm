@@ -3,19 +3,28 @@ package output
 import (
 	"encoding/json"
 	"os"
+	"runtime"
 )
 
 func ExportResultsToJSON(results interface{}, path string) error {
 	if path == "" {
 		path = "results.json"
 	}
-	file, err := os.Create(path)
+
+	// Marshal to JSON in memory
+	jsonData, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(results)
+	// Write to file
+	err = os.WriteFile(path, jsonData, 0644)
+
+	// Clear the large JSON data from memory
+	jsonData = nil
+
+	// Hint to the garbage collector
+	runtime.GC()
+
+	return err
 }
