@@ -33,7 +33,7 @@ func ExportResults(stats *SimulationStats, options ExportOptions) error {
 	return nil
 }
 
-// exportSummaryStats exports the complete statistics to JSON
+// exportSummaryStats exports the complete statistics to JSON including configuration
 func exportSummaryStats(stats *SimulationStats, filename string) error {
 	// Ensure the directory exists
 	dir := filepath.Dir(filename)
@@ -43,7 +43,18 @@ func exportSummaryStats(stats *SimulationStats, filename string) error {
 		}
 	}
 
-	data, err := json.MarshalIndent(stats, "", "  ")
+	// Create enhanced export data with metadata
+	exportData := struct {
+		*SimulationStats
+		ExportTimestamp time.Time `json:"export_timestamp"`
+		ExportVersion   string    `json:"export_version"`
+	}{
+		SimulationStats: stats,
+		ExportTimestamp: time.Now(),
+		ExportVersion:   "2.0",
+	}
+
+	data, err := json.MarshalIndent(exportData, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -84,6 +95,25 @@ func ExportCSVSummary(stats *SimulationStats, filename string) error {
 			lines = append(lines,
 				fmt.Sprintf("median_rounds,%.2f", stats.AdvancedStats.MedianRounds),
 				fmt.Sprintf("std_dev_rounds,%.2f", stats.AdvancedStats.StdDevRounds),
+			)
+		}
+	}
+
+	// Add configuration information if available
+	if stats.Config != nil {
+		lines = append(lines, "# Configuration")
+		lines = append(lines,
+			fmt.Sprintf("team1_name,%s", stats.Config.Team1Name),
+			fmt.Sprintf("team1_strategy,%s", stats.Config.Team1Strategy),
+			fmt.Sprintf("team2_name,%s", stats.Config.Team2Name),
+			fmt.Sprintf("team2_strategy,%s", stats.Config.Team2Strategy),
+			fmt.Sprintf("simulation_mode,%s", stats.SimulationMode),
+		)
+
+		if !stats.Config.Sequential {
+			lines = append(lines,
+				fmt.Sprintf("max_concurrent,%d", stats.Config.MaxConcurrent),
+				fmt.Sprintf("memory_limit_mb,%d", stats.Config.MemoryLimit),
 			)
 		}
 	}

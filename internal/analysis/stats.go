@@ -41,8 +41,9 @@ type SimulationStats struct {
 	AdvancedStats *AdvancedStats `json:"advanced_stats,omitempty"`
 
 	// Metadata
-	SimulationMode string    `json:"simulation_mode"` // "sequential" or "concurrent"
-	StartTime      time.Time `json:"start_time"`
+	SimulationMode string            `json:"simulation_mode"` // "sequential" or "concurrent"
+	StartTime      time.Time         `json:"start_time"`
+	Config         *SimulationConfig `json:"simulation_config,omitempty"` // Configuration used for this simulation
 
 	// Thread safety (only needed for concurrent)
 	ScoreMutex sync.Mutex `json:"-"`
@@ -151,10 +152,9 @@ func NewSimulationStats(config SimulationConfig) *SimulationStats {
 
 	stats := NewStats(config.NumSimulations, mode)
 
-	// Store configuration metadata
-	if stats.AdvancedStats != nil {
-		// Could store additional config metadata here if needed
-	}
+	// Store configuration for export
+	configCopy := config
+	stats.Config = &configCopy
 
 	return stats
 }

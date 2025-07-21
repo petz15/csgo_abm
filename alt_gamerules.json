@@ -3,6 +3,6 @@
   "otFunds": 10000.0,
   "startingFunds": 800.0,
   "halfLength": 15,
-  "csfR": 1.5,
+  "csfR": 1,
   "otHalfLength": 3
 }
