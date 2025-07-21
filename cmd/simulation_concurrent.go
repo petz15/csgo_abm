@@ -130,7 +130,7 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 		}()
 
 		// Run the simulation and get results directly
-		gameResult, err := StartGameWithResultsAndExport(
+		gameResult, err := StartGame_default(
 			job.Config.Team1Name,
 			job.Config.Team1Strategy,
 			job.Config.Team2Name,

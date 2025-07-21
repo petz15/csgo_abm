@@ -1,0 +1,8 @@
+{
+  "defaultEquipment": 200.0,
+  "otFunds": 10000.0,
+  "startingFunds": 800.0,
+  "halfLength": 15,
+  "csfR": 1.5,
+  "otHalfLength": 3
+}

@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-//TODO: solve too many overtime, altough currently it is not a problem
+// Main entry point for the CS:GO Economy Simulation
+//TODO: move gamerules to beginning when everything gets set up, not when each game runs (resourcemanagement and such)
+//TODO: solve overtime limit, altough currently it is not a problem
 //TODO: the simulation overview file should have a have a unique ID in the name
 //TODO: create more models and add better support for them
 //TODO: adjust the probabilities in the game engine to make it more realistic/more competitive
@@ -28,7 +30,6 @@ func main() {
 		Team1Strategy:         "all_in",
 		Team2Name:             "Team B",
 		Team2Strategy:         "default_half",
-		GameRules:             "default",
 		Sequential:            false, // Default to parallel simulations
 		ExportDetailedResults: false, // Default to not export individual results
 		Exportpath:            "",    // Will be set after parsing args
@@ -36,6 +37,7 @@ func main() {
 
 	// Parse command line arguments first to check for custom output path
 	customOutputPath := ""
+	customGameRulesPath := ""
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -73,6 +75,11 @@ func main() {
 				customOutputPath = args[i+1]
 				i++
 			}
+		case "-g", "--gamerules":
+			if i+1 < len(args) {
+				customGameRulesPath = args[i+1]
+				i++
+			}
 		case "-h", "--help":
 			printUsage()
 			return
@@ -92,22 +99,48 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Validate and prepare all customizations before starting simulations
+	customConfig, err := ValidateAndPrepareCustomizations(customGameRulesPath, config.Exportpath)
+	if err != nil {
+		fmt.Printf("❌ Configuration validation failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	config.GameRules = customConfig.GameRules
+
+	// Validate team strategies
+	if err := ValidateStrategies(config.Team1Strategy, config.Team2Strategy); err != nil {
+		fmt.Printf("❌ Strategy validation failed: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Run simulation(s)
 	if config.NumSimulations == 1 {
 		// Single simulation mode
 		fmt.Println("Running single simulation...")
-		gameID := StartGame(
+		result, err := StartGame_default(
 			config.Team1Name,
 			config.Team1Strategy,
 			config.Team2Name,
 			config.Team2Strategy,
-			config.GameRules,
+			customConfig.GameRules,
 			"",
+			config.ExportDetailedResults,
+			config.Exportpath,
 		)
-		fmt.Printf("Simulation completed. Game ID: %s\n", gameID)
+		if err != nil {
+			fmt.Printf("Error running simulation: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Simulation completed. Game ID: %s\n", result.GameID)
+		if result.Team1Won {
+			fmt.Printf("Winner: %s (%d-%d)\n", config.Team1Name, result.Team1Score, result.Team2Score)
+		} else {
+			fmt.Printf("Winner: %s (%d-%d)\n", config.Team2Name, result.Team2Score, result.Team1Score)
+		}
 	} else if config.Sequential {
 		// Sequential simulations mode
-		err := sequentialsimulation(config)
+		err := sequentialsimulation(config, customConfig.GameRules)
 		if err != nil {
 			fmt.Printf("Error running sequential simulations: %v\n", err)
 			os.Exit(1)
@@ -131,12 +164,31 @@ func printUsage() {
 	fmt.Println("  -s, --sequential       Run simulations sequentially instead of in parallel")
 	fmt.Println("  -e, --export           Export individual game results as JSON files (works with both modes)")
 	fmt.Println("  -o, --output <path>    Results output directory (default: results_YYYYMMDD_HHMMSS)")
+	fmt.Println("  -g, --gamerules <file> Path to JSON file with custom game rules (default: built-in defaults)")
 	fmt.Println("  -t1, --team1 <strategy> Team 1 strategy (default: all_in)")
 	fmt.Println("  -t2, --team2 <strategy> Team 2 strategy (default: default_half)")
 	fmt.Println("  -h, --help             Print this help message")
 	fmt.Println("\nAvailable strategies:")
 	fmt.Println("  all_in                 Always invest all available funds")
 	fmt.Println("  default_half           Default strategy that invests half of available funds")
+	fmt.Println("  adaptive_eco_v1        Advanced adaptive economic strategy")
+	fmt.Println("  yolo                   Random investment strategy (high risk)")
+	fmt.Println("  scrooge                Minimal investment strategy (ultra-conservative)")
+	fmt.Println("\nGame Rules Configuration:")
+	fmt.Println("  You can customize game parameters using a JSON file. Example:")
+	fmt.Println("  go run ./cmd -g example_gamerules.json")
+	fmt.Println("  ")
+	fmt.Println("  The JSON file can contain any or all of these fields:")
+	fmt.Println("  {")
+	fmt.Println("    \"defaultEquipment\": 250.0,    // Equipment cost per player")
+	fmt.Println("    \"otFunds\": 10000.0,           // Overtime starting funds")
+	fmt.Println("    \"startingFunds\": 1000.0,      // Match starting funds")
+	fmt.Println("    \"halfLength\": 12,             // Rounds per half")
+	fmt.Println("    \"csfR\": 0.7,                  // Contest success function parameter")
+	fmt.Println("    \"otHalfLength\": 3             // Overtime rounds per half")
+	fmt.Println("  }")
+	fmt.Println("  ")
+	fmt.Println("  Missing fields will use default values automatically.")
 	fmt.Println("\nExamples:")
 	fmt.Println("  # Run a single simulation")
 	fmt.Println("  go run ./cmd")

@@ -26,9 +26,8 @@ type Game struct {
 	Team2          *Team
 }
 
-func NewGame(id string, Team1Name string, Team1Strategy string, Team2Name string, Team2Strategy string, gamerules_path string) *Game {
-
-	gameRules := NewGameRules(gamerules_path)
+// NewGame creates a new game with pre-validated GameRules object (optimized for batch simulations)
+func NewGame(id string, Team1Name string, Team1Strategy string, Team2Name string, Team2Strategy string, gameRules GameRules) *Game {
 
 	currentCT := rand.Intn(2) == 0
 
@@ -106,14 +105,14 @@ func (g *Game) switchSide() {
 
 func (g *Game) GameFinished() {
 	if !g.OT {
-		if g.Score[0] == 16 && g.Score[1] < 15 {
+		if g.Score[0] >= (g.GameRules.HalfLength+1) && g.Score[1] < (g.GameRules.HalfLength) {
 			g.GameinProgress = false
 			g.WinnerTeam = false // Team1 wins
-		} else if g.Score[1] == 16 && g.Score[0] < 15 {
+		} else if g.Score[1] >= (g.GameRules.HalfLength+1) && g.Score[0] < (g.GameRules.HalfLength) {
 			g.GameinProgress = false
 			g.WinnerTeam = true // Team2 wins
 		}
-	} else if ((g.Score[0]-16)/g.OTcounter) > 4 && ((g.Score[1]-16)/g.OTcounter) > 4 && math.Abs(float64(g.Score[0]-g.Score[1])) >= 2 {
+	} else if ((g.Score[0]-g.GameRules.HalfLength-(g.OTcounter*g.GameRules.OTHalfLength)) >= 1 || (g.Score[1]-g.GameRules.HalfLength-(g.OTcounter*g.GameRules.OTHalfLength)) >= 1) && math.Abs(float64(g.Score[0]-g.Score[1])) >= 2 {
 		g.GameinProgress = false
 		if g.Score[0] > g.Score[1] {
 			g.WinnerTeam = false // Team1 wins

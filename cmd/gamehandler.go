@@ -19,8 +19,8 @@ type GameResult struct {
 }
 
 // StartGame initializes and runs a single game simulation (legacy function for single simulations)
-func StartGame(team1Name string, team1Strategy string, team2Name string, team2Strategy string,
-	gameRules string, simPrefix string) string {
+func StartGame_simple(team1Name string, team1Strategy string, team2Name string, team2Strategy string,
+	gameRules engine.GameRules, simPrefix string) string {
 
 	ID := util.CreateGameID()
 	if simPrefix != "" {
@@ -50,16 +50,16 @@ func StartGame(team1Name string, team1Strategy string, team2Name string, team2St
 	return ID
 }
 
-// StartGameWithResultsAndExport runs a simulation, returns results directly, and optionally exports to JSON
-func StartGameWithResultsAndExport(team1Name string, team1Strategy string, team2Name string, team2Strategy string,
-	gameRules string, simPrefix string, exportJSON bool, exportpath string) (*GameResult, error) {
+// StartGameWithValidatedRules runs a simulation with pre-validated GameRules (optimized for batch processing)
+func StartGame_default(team1Name string, team1Strategy string, team2Name string, team2Strategy string,
+	gameRules engine.GameRules, simPrefix string, exportJSON bool, exportpath string) (*GameResult, error) {
 
 	ID := util.CreateGameID()
 	if simPrefix != "" {
 		ID = simPrefix + ID
 	}
 
-	// Create a new game instance
+	// Create a new game instance with pre-validated rules
 	game := engine.NewGame(ID, team1Name, team1Strategy, team2Name, team2Strategy, gameRules)
 
 	// Start the simulation

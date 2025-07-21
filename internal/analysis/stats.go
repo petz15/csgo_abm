@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"CSGO_ABM/internal/engine"
 	"fmt"
 	"runtime"
 	"sync"
@@ -94,17 +95,17 @@ type RoundStats struct {
 
 // SimulationConfig unified configuration for all simulation types
 type SimulationConfig struct {
-	NumSimulations        int    `json:"num_simulations"`
-	MaxConcurrent         int    `json:"max_concurrent,omitempty"` // Only for concurrent
-	MemoryLimit           int    `json:"memory_limit,omitempty"`   // Only for concurrent
-	Team1Name             string `json:"team1_name"`
-	Team1Strategy         string `json:"team1_strategy"`
-	Team2Name             string `json:"team2_name"`
-	Team2Strategy         string `json:"team2_strategy"`
-	GameRules             string `json:"game_rules"`
-	ExportDetailedResults bool   `json:"export_detailed_results"`
-	Sequential            bool   `json:"sequential"`
-	Exportpath            string `json:"export_path,omitempty"` // Path for exporting results
+	NumSimulations        int              `json:"num_simulations"`
+	MaxConcurrent         int              `json:"max_concurrent,omitempty"` // Only for concurrent
+	MemoryLimit           int              `json:"memory_limit,omitempty"`   // Only for concurrent
+	Team1Name             string           `json:"team1_name"`
+	Team1Strategy         string           `json:"team1_strategy"`
+	Team2Name             string           `json:"team2_name"`
+	Team2Strategy         string           `json:"team2_strategy"`
+	GameRules             engine.GameRules `json:"game_rules"`
+	ExportDetailedResults bool             `json:"export_detailed_results"`
+	Sequential            bool             `json:"sequential"`
+	Exportpath            string           `json:"export_path,omitempty"` // Path for exporting results
 }
 
 // Validate validates the simulation configuration
@@ -120,9 +121,6 @@ func (c *SimulationConfig) Validate() error {
 	}
 	if c.Team2Strategy == "" {
 		c.Team2Strategy = "default_half"
-	}
-	if c.GameRules == "" {
-		c.GameRules = "default"
 	}
 	return nil
 }
