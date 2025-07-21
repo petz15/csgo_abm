@@ -78,18 +78,18 @@ func (g *Game) Start() {
 }
 
 func (g *Game) GameState() {
-	if g.CurrentRound == 15 {
+	if g.CurrentRound == g.GameRules.HalfLength+1 {
 		g.switchSide()
 	}
 
-	if g.CurrentRound == 31 || (g.OT && g.CurrentRound == (15+(g.OTcounter*6)+1)) {
+	if g.CurrentRound == (g.GameRules.HalfLength*2)+1 || (g.OT && g.CurrentRound == ((g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength*2)+1)) {
 		g.OT = true
 		g.OTcounter++
 		g.Team1.NewOT(g.GameRules.OTFunds)
 		g.Team2.NewOT(g.GameRules.OTFunds)
 	}
 
-	if g.OT && g.CurrentRound == (15+(g.OTcounter*3)+1) {
+	if g.OT && g.CurrentRound == (g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength)+1 {
 		g.switchSide()
 	}
 
