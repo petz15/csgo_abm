@@ -10,12 +10,14 @@ import (
 )
 
 // Main entry point for the CS:GO Economy Simulation
+//TODO: check the new probabilities if they are good. export results
+//TODO: write the analyzer in python in order to look at the detail results and anlyze them
 //TODO: solve overtime limit, altough currently it is not a problem
 //TODO: the simulation overview file should have a have a unique ID in the name
 //TODO: create more models and add better support for them
 //TODO: adjust the probabilities in the game engine to make it more realistic/more competitive. Done, maybe could be improved
 //TODO: (later) add support for importing models from a file. and AI/machine learning models. no clue how
-//TODO: adjust the information the strategy manager gives the models
+//TODO: adjust the information the strategy manager gives the models. Done, could still be improved
 //TODO: make the resulting terminal output adjustable i.e. simple or pretty
 
 func main() {
@@ -170,6 +172,7 @@ func printUsage() {
 	fmt.Println("  all_in                 Always invest all available funds")
 	fmt.Println("  default_half           Default strategy that invests half of available funds")
 	fmt.Println("  adaptive_eco_v1        Advanced adaptive economic strategy")
+	fmt.Println("  adaptive_eco_v2        Enhanced adaptive strategy with contextual awareness")
 	fmt.Println("  yolo                   Random investment strategy (high risk)")
 	fmt.Println("  scrooge                Minimal investment strategy (ultra-conservative)")
 	fmt.Println("\nGame Rules Configuration:")

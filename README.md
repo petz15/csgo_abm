@@ -1,4 +1,10 @@
-# CS:GO Agent-Based Economy Model (CSGO_ABM)
+# CS:GO Agent-Based Econom   └── models
+       ├── all_in.go                 # "All-in" spending strategy
+       ├── default_half.go           # "Default-half" spending strategy
+       ├── adaptive_eco_v1.go        # Advanced adaptive economic strategy
+       ├── adaptive_eco_v2.go        # Enhanced contextual adaptive strategy
+       ├── yolo.go                   # High-risk random investment strategy
+       └── scrooge.go                # Ultra-conservative minimal investment strategyodel (CSGO_ABM)
 
 This project implements an agent-based model simulating the economy aspect of Counter-Strike: Global Offensive (CS:GO). The simulation focuses on how teams manage their finances, make investment decisions, and the impact of these decisions on game outcomes through probabilistic models.
 
@@ -48,13 +54,15 @@ CSGO_ABM
 ### 🎮 **Realistic Game Simulation**
 - Random assignment of teams to Counter-Terrorist (CT) and Terrorist (T) sides
 - Dynamic economy system with realistic fund allocation and spending strategies
-- Contest Success Function (CSF) for probabilistic outcome determination
+- Contest Success Function (CSF) for probabilistic outcome determination with customizable skewness
 - Equipment value tracking and survival calculations
 - Complete match simulation including:
   - Half-time side swapping after 15 rounds
   - Overtime mechanics when tied at 15-15
   - Loss bonus calculation based on consecutive losses
   - Bomb plant mechanics and related bonuses
+- **Advanced Strategy System**: Multiple AI strategies with contextual decision-making
+- **Enhanced Probability Models**: Skewed normal distributions for realistic outcome variance
 
 ### 📊 **Unified Analysis System**
 - **Advanced Statistics**: Win streak analysis, statistical significance testing, and balance scoring
@@ -64,7 +72,11 @@ CSGO_ABM
 - **Real-time Monitoring**: Progress tracking with performance metrics and memory optimization
 - **Thread-Safe Operations**: Atomic updates for concurrent simulation processing
 
-### 🔧 **Latest Improvements (v2.0)**
+### 🔧 **Latest Improvements (v2.5)**
+- **Enhanced Strategy System**: New `adaptive_eco_v2` with contextual awareness and psychological modeling
+- **Advanced Probability Models**: Skewed normal distributions with momentum effects
+- **Economic Intelligence**: Strategies now consider opponent state, loss bonuses, and round importance
+- **Multiple Strategy Types**: 6 distinct strategies from ultra-conservative to high-risk gambling
 - **Unified Analysis Package**: Consolidated statistical processing across all simulation modes
 - **Enhanced Reporting**: Rich visual output with strategic insights and recommendations
 - **Code Simplification**: Eliminated duplicate code, unified configuration system
@@ -74,16 +86,25 @@ CSGO_ABM
 
 ## Probability Models
 
-The simulation uses several probability models to determine outcomes:
+The simulation uses several advanced probability models to determine outcomes:
 
 1. **Contest Success Function (CSF)**: Calculates the probability of winning based on team expenditures
    - Uses Tullock contest model with adjustable parameter r
    - Higher r values make outcomes more deterministic
 
-2. **CSF Normal Distribution**: Generates values from a normal distribution with:
+2. **CSF Normal Distribution with Skewness**: Generates values from a normal distribution with:
    - Mean positioned according to the CSF probability
-   - Standard deviation set to 1/4 of the output range
+   - Configurable standard deviation (controlled by stdDevFactor)
+   - **Skewness support**: Azzalini's skew-normal transformation for realistic asymmetric outcomes
    - Configurable output range for different game aspects
+   - Perfect for modeling momentum effects and psychological factors
+
+3. **Enhanced Strategy System**: AI strategies with contextual awareness:
+   - **Economic state assessment**: Healthy, moderate, poor, critical funding levels
+   - **Round-specific logic**: Pistol rounds, anti-eco situations, overtime pressure
+   - **Side-specific adjustments**: CT vs T economic differences
+   - **Score pressure dynamics**: Aggressive play when behind, conservative when ahead
+   - **Loss bonus optimization**: Strategic use of consecutive loss economics
 
 ## Getting Started
 
@@ -369,11 +390,30 @@ Contributions are welcome! The project has been significantly improved with robu
 
 ### Areas for Contribution
 - **Strategy Development**: Implement new economic strategies in `internal/models/`
+- **Machine Learning Integration**: Add ML-based adaptive strategies and opponent modeling
 - **Performance Optimization**: Improve simulation speed and memory efficiency  
 - **Testing**: Add comprehensive test suites for parallel simulation reliability
 - **Documentation**: Improve code documentation and usage examples
 - **Analysis Tools**: Create visualization and statistical analysis utilities
 - **Game Mechanics**: Add new CS:GO features (weapon mechanics, map-specific strategies)
+- **Web Dashboard**: Real-time monitoring and interactive strategy comparison
+- **Tournament Simulation**: Multi-game series and bracket simulation
+- **Economic Intelligence**: Opponent fund estimation and counter-strategy development
+
+### High-Priority Improvements
+1. **Enhanced Strategy Migration**: Move all strategies to contextual decision-making system
+2. **Economic Intelligence**: Opponent fund estimation and behavior prediction
+3. **Real-time Dashboard**: Web-based simulation monitoring and analysis
+4. **Machine Learning Framework**: Foundation for adaptive and learning strategies
+5. **Advanced Game Mechanics**: Map control, weapon-specific modeling, tactical rounds
+
+### Future Vision
+- **Professional Integration**: Real CS:GO team data and strategy modeling
+- **Academic Research Platform**: Tools for economic and game theory research  
+- **Tournament Simulation**: Complete esports ecosystem modeling
+- **Multi-Agent Reinforcement Learning**: Self-improving strategies through AI
+
+For detailed roadmap and implementation suggestions, see `PROJECT_ROADMAP.md`.
 
 ### Development Guidelines
 - Follow Go best practices for concurrency
