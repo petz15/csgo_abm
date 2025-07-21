@@ -58,7 +58,7 @@ func (g *Game) Start() {
 		g.CurrentRound++
 		g.GameState()
 
-		round := NewRound(g.Team1, g.Team2, g.CurrentRound, g.CurrentCT, g.sideswitch, &g.GameRules)
+		round := NewRound(g.Team1, g.Team2, g.CurrentRound, g.CurrentCT, g.sideswitch, &g.GameRules, g.OT)
 
 		round.BuyPhase()
 

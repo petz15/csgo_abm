@@ -13,7 +13,7 @@ import (
 //TODO: solve overtime limit, altough currently it is not a problem
 //TODO: the simulation overview file should have a have a unique ID in the name
 //TODO: create more models and add better support for them
-//TODO: adjust the probabilities in the game engine to make it more realistic/more competitive
+//TODO: adjust the probabilities in the game engine to make it more realistic/more competitive. Done, maybe could be improved
 //TODO: (later) add support for importing models from a file. and AI/machine learning models. no clue how
 //TODO: adjust the information the strategy manager gives the models
 //TODO: make the resulting terminal output adjustable i.e. simple or pretty

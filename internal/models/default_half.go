@@ -1,11 +1,11 @@
 package models
 
-func InvestDecisionMaking_half(funds float64, curround int, curscoreopo int) float64 {
+func InvestDecisionMaking_half(ctx StrategyContext_simple) float64 {
 
-	if curround == 15 || curround == 30 {
-		return funds // Invest half of the funds at round 15 and 30
+	if ctx.CurrentRound == 15 || ctx.CurrentRound == 30 {
+		return ctx.Funds // Invest half of the funds at round 15 and 30
 	} else {
-		return funds / 2 // Invest half of the funds in other rounds
+		return ctx.Funds / 2 // Invest half of the funds in other rounds
 	}
 
 }

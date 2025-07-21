@@ -7,8 +7,13 @@ import "math"
 // - Round importance (pistol, anti-eco, buy rounds)
 // - Score differential and match situation
 // - Risk assessment based on remaining funds
-func InvestDecisionMaking_adaptive_v1(funds float64, curround int, curscoreopo int) float64 {
+func InvestDecisionMaking_adaptive_v1(ctx StrategyContext_simple) float64 {
 	// Basic economic thresholds (team-based: 5 players)
+
+	funds := ctx.Funds
+	curround := ctx.CurrentRound
+	curscoreopo := ctx.OpponentScore
+
 	const (
 		fullBuyThreshold  = 3500.0 * 5 // Minimum for full buy
 		forceBuyThreshold = 2500.0 * 5 // Force buy threshold

@@ -21,9 +21,10 @@ type Round struct {
 	EquipmentT2   float64 // Total equipment value for T2 team
 	FundsearnedT1 float64 // Total funds earned by T1 team
 	FundsearnedT2 float64 // Total funds earned by T2 team
+	OT            bool    // True if this is an overtime round
 }
 
-func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules) *Round {
+func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules, ot bool) *Round {
 
 	T1.NewRound()
 	T2.NewRound()
@@ -45,14 +46,16 @@ func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, 
 		EquipmentT2:   0,
 		FundsearnedT1: 0,
 		FundsearnedT2: 0,
+		OT:            ot,
 	}
 }
 
 // solution for what information gets passed to the teams, could be a json file in the gamerules which specifies
 // which variables are passed to the teams. No clue how this will be done yet, but it is an idea.
 func (r *Round) BuyPhase() {
-	r.Team1.BuyPhase(r.RoundNumber, r.Team2.Score)
-	r.Team2.BuyPhase(r.RoundNumber, r.Team1.Score)
+	r.Team1.BuyPhase(r.RoundNumber, r.OT, r.Team2, *r.gameRules) // Call the team's buy phase logic
+	r.Team2.BuyPhase(r.RoundNumber, r.OT, r.Team1, *r.gameRules)
+
 }
 
 func (r *Round) RoundStart() {
@@ -115,6 +118,14 @@ func (r *Round) determineFundsEarned() {
 		r.FundsearnedT1 += float64(loserBonusFunds * 5)
 	}
 
+	// Ensure funds do not exceed maximum allowed
+	if r.Team1.Funds+r.FundsearnedT1 > r.gameRules.MaxFunds {
+		r.FundsearnedT1 = r.gameRules.MaxFunds - r.Team1.Funds
+	}
+	if r.Team2.Funds+r.FundsearnedT2 > r.gameRules.MaxFunds {
+		r.FundsearnedT2 = r.gameRules.MaxFunds - r.Team2.Funds
+	}
+
 }
 
 func (r *Round) LossBonusCalculation(loserteam *Team) int {
@@ -137,19 +148,48 @@ func (r *Round) LossBonusCalculation(loserteam *Team) int {
 func (r *Round) determineSurvivors() {
 
 	//this is necessary if bomb plant chances are used
-	/* ctteam_equipment := r.Team1.Equipment
+	ctteam_equipment := r.Team1.Equipment
 	tteam_equipment := r.Team2.Equipment
 
 	if r.CTTeam {
 		ctteam_equipment = r.Team1.Equipment
 		tteam_equipment = r.Team2.Equipment
-	} */
+	}
 
-	team1equipment := r.Team1.Equipment
-	team2equipment := r.Team2.Equipment
+	// old distribution (and tested)
+	/*
+		team1equipment := r.Team1.Equipment
+		team2equipment := r.Team2.Equipment
+		r.SurvivingT1 = int(math.Round(CSFNormalDistribution_std_4(float64(team1equipment), float64(team2equipment), r.gameRules.CSF_r, 0, 5)))
+		r.SurvivingT2 = int(math.Round(CSFNormalDistribution_std_4(float64(team2equipment), float64(team1equipment), r.gameRules.CSF_r, 0, 5)))
+	*/
 
-	r.SurvivingT1 = int(math.Round(CSFNormalDistribution_std_4(float64(team1equipment), float64(team2equipment), r.gameRules.CSF_r, 0, 5)))
-	r.SurvivingT2 = int(math.Round(CSFNormalDistribution_std_4(float64(team2equipment), float64(team1equipment), r.gameRules.CSF_r, 0, 5)))
+	// new distribution
+	surviving_CT := 0
+	surviving_T := 0
+
+	switch {
+	case r.BombPlanted && r.WinnerSide: // T wins with bomb planted
+		surviving_CT = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(ctteam_equipment), float64(tteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -1.0)))
+		surviving_T = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(tteam_equipment), float64(ctteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -0.5)))
+	case r.BombPlanted && !r.WinnerSide: // CT wins with bomb planted
+		surviving_CT = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(ctteam_equipment), float64(tteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -0.5)))
+		surviving_T = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(tteam_equipment), float64(ctteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -1.0)))
+	case !r.BombPlanted && r.WinnerSide: // T wins without bomb planted
+		surviving_CT = 0
+		surviving_T = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(tteam_equipment), float64(ctteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -0.5)))
+	case !r.BombPlanted && !r.WinnerSide: // CT wins without bomb planted
+		surviving_CT = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(ctteam_equipment), float64(tteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -0.5)))
+		surviving_T = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(tteam_equipment), float64(ctteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -2.0)))
+	}
+
+	if !r.CTTeam {
+		r.SurvivingT1 = surviving_CT
+		r.SurvivingT2 = surviving_T
+	} else {
+		r.SurvivingT1 = surviving_T
+		r.SurvivingT2 = surviving_CT
+	}
 
 }
 

@@ -70,9 +70,9 @@ func (t *Team) NewRound() {
 
 // for now it is a set of variables, in the future it could be a json file with information
 // the state of the game, team, round etc.
-func (t *Team) BuyPhase(Round int, ScoreOpo int) {
+func (t *Team) BuyPhase(Round int, ot bool, t2 *Team, gameR GameRules) {
 
-	investment := CallStrategy(t, Round, ScoreOpo) // Call the strategy manager to get investment amount
+	investment := CallStrategy(t, t2, Round, ot, gameR) // Call the strategy manager to get investment amount
 
 	t.SpendFunds(investment) // Spend investment amount
 

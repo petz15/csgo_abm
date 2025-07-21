@@ -13,6 +13,7 @@ type GameRules struct {
 	HalfLength       int     `json:"halfLength"`       // Length of a half in rounds
 	CSF_r            float64 `json:"csfR"`             // Contest Success Function parameter
 	OTHalfLength     int     `json:"otHalfLength"`     // Length of overtime half in rounds
+	MaxFunds         float64 `json:"maxFunds"`         // Maximum funds allowed for a team
 }
 
 // getDefaultRules returns the default game rules configuration
@@ -22,8 +23,9 @@ func getDefaultRules() GameRules {
 		OTFunds:          10000,
 		StartingFunds:    800,
 		HalfLength:       15,
-		CSF_r:            0.8, // Default value for CSF_r
-		OTHalfLength:     3,   // Default value for Overtime half length
+		CSF_r:            0.8,    // Default value for CSF_r
+		OTHalfLength:     3,      // Default value for Overtime half length
+		MaxFunds:         999999, // Default value for Maximum funds
 	}
 }
 
@@ -40,6 +42,11 @@ func validateGameRulesStrict(rules GameRules) bool {
 	}
 	if rules.OTFunds < 0 {
 		fmt.Println("Overtime funds must be non-negative")
+		return false
+	}
+
+	if rules.MaxFunds < 0 {
+		fmt.Println("Maximum funds must be non-negative")
 		return false
 	}
 
@@ -104,6 +111,9 @@ func NewGameRules(pathtoFile string) (GameRules, bool) {
 		}
 		if jsonRules.OTHalfLength > 0 {
 			candidateRules.OTHalfLength = jsonRules.OTHalfLength
+		}
+		if jsonRules.MaxFunds > 0 {
+			candidateRules.MaxFunds = jsonRules.MaxFunds
 		}
 
 		// Strict validation - if ANY value fails, use all defaults
