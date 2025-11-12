@@ -1,9 +1,9 @@
 package main
 
 import (
-	"CSGO_ABM/internal/analysis"
-	"CSGO_ABM/internal/engine"
-	"CSGO_ABM/util"
+	"csgo_abm/internal/analysis"
+	"csgo_abm/internal/engine"
+	"csgo_abm/util"
 	"encoding/json"
 	"fmt"
 	"os"

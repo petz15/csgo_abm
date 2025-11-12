@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"CSGO_ABM/internal/models"
+	"csgo_abm/internal/models"
 	"math"
 )
 

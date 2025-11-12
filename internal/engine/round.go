@@ -1,27 +1,24 @@
 package engine
 
-import (
-	"math"
-)
-
 type Round struct {
-	RoundNumber   int
-	Team1         *Team
-	Team2         *Team
-	CTTeam        bool // false if Team1 is CT
-	WinnerTeam    bool //False if Team1 wins, true if Team2 wins
-	WinnerSide    bool // false if CT wins, true if T wins
-	BombPlanted   bool
-	Sideswitch    bool // True if sideswitch has occurred
-	Bombplanted   bool
-	gameRules     *GameRules
-	SurvivingT1   int     // Number of surviving T1 players
-	SurvivingT2   int     // Number of surviving T2 players
-	EquipmentT1   float64 // Total equipment value for T1 team
-	EquipmentT2   float64 // Total equipment value for T2 team
-	FundsearnedT1 float64 // Total funds earned by T1 team
-	FundsearnedT2 float64 // Total funds earned by T2 team
-	OT            bool    // True if this is an overtime round
+	RoundNumber    int
+	Team1          *Team
+	Team2          *Team
+	CTTeam         bool // false if Team1 is CT
+	WinnerTeam     bool //False if Team1 wins, true if Team2 wins
+	WinnerSide     bool // false if CT wins, true if T wins
+	BombPlanted    bool
+	RoundEndReason string // "Elimination", "Defused", "Exploded"
+	Sideswitch     bool   // True if sideswitch has occurred
+	Bombplanted    bool
+	gameRules      *GameRules
+	SurvivingT1    int     // Number of surviving T1 players
+	SurvivingT2    int     // Number of surviving T2 players
+	EquipmentT1    float64 // Total equipment value for T1 team
+	EquipmentT2    float64 // Total equipment value for T2 team
+	FundsearnedT1  float64 // Total funds earned by T1 team
+	FundsearnedT2  float64 // Total funds earned by T2 team
+	OT             bool    // True if this is an overtime round
 }
 
 func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules, ot bool) *Round {
@@ -152,35 +149,42 @@ func (r *Round) determineSurvivors() {
 	tteam_equipment := r.Team2.Equipment
 
 	if r.CTTeam {
-		ctteam_equipment = r.Team1.Equipment
-		tteam_equipment = r.Team2.Equipment
+		ctteam_equipment = r.Team2.Equipment
+		tteam_equipment = r.Team1.Equipment
 	}
 
-	// old distribution (and tested)
-	/*
-		team1equipment := r.Team1.Equipment
-		team2equipment := r.Team2.Equipment
-		r.SurvivingT1 = int(math.Round(CSFNormalDistribution_std_4(float64(team1equipment), float64(team2equipment), r.gameRules.CSF_r, 0, 5)))
-		r.SurvivingT2 = int(math.Round(CSFNormalDistribution_std_4(float64(team2equipment), float64(team1equipment), r.gameRules.CSF_r, 0, 5)))
-	*/
+	// Map round end reason to code for ABM lookup
+	reasonCode := r.mapRoundEndReasonToCode()
 
-	// new distribution
+	// Calculate CSF probability for winner
+	var csfProb float64
+	if r.WinnerSide { // T wins
+		csfProb = ContestSuccessFunction_simples(tteam_equipment, ctteam_equipment, r.gameRules.CSF_r)
+	} else { // CT wins
+		csfProb = ContestSuccessFunction_simples(ctteam_equipment, tteam_equipment, r.gameRules.CSF_r)
+	}
+
+	// Use ABM models to sample survivors
 	surviving_CT := 0
 	surviving_T := 0
 
-	switch {
-	case r.BombPlanted && r.WinnerSide: // T wins with bomb planted
-		surviving_CT = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(ctteam_equipment), float64(tteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -1.0)))
-		surviving_T = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(tteam_equipment), float64(ctteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -0.5)))
-	case r.BombPlanted && !r.WinnerSide: // CT wins with bomb planted
-		surviving_CT = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(ctteam_equipment), float64(tteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -0.5)))
-		surviving_T = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(tteam_equipment), float64(ctteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -1.0)))
-	case !r.BombPlanted && r.WinnerSide: // T wins without bomb planted
-		surviving_CT = 0
-		surviving_T = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(tteam_equipment), float64(ctteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -0.5)))
-	case !r.BombPlanted && !r.WinnerSide: // CT wins without bomb planted
-		surviving_CT = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(ctteam_equipment), float64(tteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -0.5)))
-		surviving_T = int(math.Round(CSFNormalDistribution_std_custom_skew(float64(tteam_equipment), float64(ctteam_equipment), r.gameRules.CSF_r, 0, 5, 4.0, -2.0)))
+	if r.WinnerSide { // T wins
+		surviving_T = SampleSurvivorsFromABM("T", reasonCode, csfProb)
+		// Losing CT team has fewer/no survivors based on reason
+		if reasonCode == "8" { // Elimination
+			surviving_CT = 0
+		} else {
+			// For bomb explosion scenarios, CT may have some survivors
+			surviving_CT = SampleSurvivorsFromABM("CT", reasonCode, 1.0-csfProb)
+		}
+	} else { // CT wins
+		surviving_CT = SampleSurvivorsFromABM("CT", reasonCode, csfProb)
+		// Losing T team
+		if reasonCode == "8" { // Elimination
+			surviving_T = 0
+		} else {
+			surviving_T = SampleSurvivorsFromABM("T", reasonCode, 1.0-csfProb)
+		}
 	}
 
 	if !r.CTTeam {
@@ -193,15 +197,56 @@ func (r *Round) determineSurvivors() {
 
 }
 
-func (r *Round) determineRemainingEquipment() {
-	team1equipment := r.Team1.Equipment
-	team2equipment := r.Team2.Equipment
+// mapRoundEndReasonToCode converts the round end reason string to the code used in ABM models
+func (r *Round) mapRoundEndReasonToCode() string {
+	switch r.RoundEndReason {
+	case "Defused":
+		return "7"
+	case "Exploded":
+		return "9"
+	case "Elimination":
+		return "8"
+	default:
+		return "8" // Default to elimination
+	}
+}
 
-	// Careful! Here the inverse is used. Because the remaining equipement is largely by the other
-	// teams equipment and their chances of winning fights, i.e.
-	//TODO: This should potentiall be changed i.e. to factor in the equipment lost by the other team
-	r.EquipmentT1 = (CSFNormalDistribution_std_4(team2equipment, team1equipment, r.gameRules.CSF_r, (team1equipment / 5 * 0.8), ((math.Max(team1equipment, team2equipment) / 5) * 1.2))) * float64(r.SurvivingT1)
-	r.EquipmentT2 = (CSFNormalDistribution_std_4(team1equipment, team2equipment, r.gameRules.CSF_r, (team2equipment / 5 * 0.8), ((math.Max(team1equipment, team2equipment) / 5) * 1.2))) * float64(r.SurvivingT2)
+func (r *Round) determineRemainingEquipment() {
+	// Use ABM models to determine equipment saved based on survivors
+	ctteam_equipment := r.Team1.Equipment
+	tteam_equipment := r.Team2.Equipment
+
+	ctSurvivors := r.SurvivingT1
+	tSurvivors := r.SurvivingT2
+
+	if r.CTTeam {
+		ctteam_equipment = r.Team2.Equipment
+		tteam_equipment = r.Team1.Equipment
+		ctSurvivors = r.SurvivingT2
+		tSurvivors = r.SurvivingT1
+	}
+
+	reasonCode := r.mapRoundEndReasonToCode()
+
+	// Sample equipment saved from ABM models
+	equipmentCT := SampleEquipmentSavedFromABM("CT", reasonCode, ctSurvivors)
+	equipmentT := SampleEquipmentSavedFromABM("T", reasonCode, tSurvivors)
+
+	// If ABM returns 0, use fallback calculation based on average equipment per player
+	if equipmentCT == 0 && ctSurvivors > 0 {
+		equipmentCT = (ctteam_equipment / 5) * float64(ctSurvivors) * 0.7 // 70% of average equipment
+	}
+	if equipmentT == 0 && tSurvivors > 0 {
+		equipmentT = (tteam_equipment / 5) * float64(tSurvivors) * 0.7
+	}
+
+	if !r.CTTeam {
+		r.EquipmentT1 = equipmentCT
+		r.EquipmentT2 = equipmentT
+	} else {
+		r.EquipmentT1 = equipmentT
+		r.EquipmentT2 = equipmentCT
+	}
 }
 
 func (r *Round) determineBombplant() {
@@ -211,25 +256,38 @@ func (r *Round) determineBombplant() {
 	tteam_equipment := r.Team2.Equipment
 
 	if r.CTTeam {
-		ctteam_equipment = r.Team1.Equipment
-		tteam_equipment = r.Team2.Equipment
+		ctteam_equipment = r.Team2.Equipment
+		tteam_equipment = r.Team1.Equipment
 	}
 
-	r.BombPlanted = bool_CSF_simple(ctteam_equipment, tteam_equipment, r.gameRules.CSF_r)
+	r.BombPlanted = bool_CSF_simple(tteam_equipment, ctteam_equipment, r.gameRules.CSF_r)
 
 }
 
 func (r *Round) determineWinner() {
-	// Placeholder for CSF logic
+	// Use CSF with r = 1.0855 to determine winner
 	team1equipment := r.Team1.Equipment
 	team2equipment := r.Team2.Equipment
 
+	// Determine if Team1 wins using CSF
 	r.WinnerTeam = bool_CSF_simple(team1equipment, team2equipment, r.gameRules.CSF_r)
 
+	// Determine which side won (CT or T)
+	ctWins := false
 	if r.WinnerTeam == r.CTTeam {
 		r.WinnerSide = false // CT wins
+		ctWins = true
 	} else {
 		r.WinnerSide = true // T wins
+		ctWins = false
 	}
 
+	// Calculate CSF probability for ABM sampling
+	csfProb := ContestSuccessFunction_simples(team1equipment, team2equipment, r.gameRules.CSF_r)
+	if !ctWins {
+		csfProb = 1.0 - csfProb
+	}
+
+	// Determine the round end reason using ABM distribution
+	r.RoundEndReason = SampleRoundEndFromABM(ctWins, csfProb)
 }

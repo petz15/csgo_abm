@@ -1,8 +1,8 @@
 package main
 
 import (
-	"CSGO_ABM/internal/analysis"
 	"context"
+	"csgo_abm/internal/analysis"
 	"encoding/json"
 	"fmt"
 	"os"

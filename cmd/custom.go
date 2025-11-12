@@ -1,7 +1,7 @@
 package main
 
 import (
-	"CSGO_ABM/internal/engine"
+	"csgo_abm/internal/engine"
 	"fmt"
 	"os"
 	"path/filepath"

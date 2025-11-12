@@ -1,7 +1,7 @@
 package main
 
 import (
-	"CSGO_ABM/internal/analysis"
+	"csgo_abm/internal/analysis"
 	"fmt"
 	"math"
 	"os"
