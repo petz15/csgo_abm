@@ -15,8 +15,19 @@ type CustomConfig struct {
 }
 
 // ValidateAndPrepareCustomizations validates all custom configurations before simulations start
-func ValidateAndPrepareCustomizations(gameRulesPath, exportPath string) (*CustomConfig, error) {
+func ValidateAndPrepareCustomizations(gameRulesPath, abmModelsPath, exportPath string) (*CustomConfig, error) {
 	config := &CustomConfig{}
+
+	// Load ABM models first (mandatory for simulations to run)
+	fmt.Println("🔧 Loading ABM probability models...")
+	if err := engine.LoadABMModels(abmModelsPath); err != nil {
+		return nil, fmt.Errorf("failed to load ABM models (required): %w", err)
+	}
+	if abmModelsPath != "" {
+		fmt.Printf("✅ ABM probability models loaded successfully from: %s\n", abmModelsPath)
+	} else {
+		fmt.Println("✅ ABM probability models loaded successfully from default location")
+	}
 
 	// Validate and load game rules
 	fmt.Println("🔧 Validating game configuration...")
@@ -27,7 +38,7 @@ func ValidateAndPrepareCustomizations(gameRulesPath, exportPath string) (*Custom
 	if imported {
 		fmt.Printf("✅ Custom game rules loaded successfully. Custom game rules loaded from: %s\n", gameRulesPath)
 	} else {
-		fmt.Println(" Using default game rules.")
+		fmt.Println("✅ Using default game rules.")
 	}
 
 	// Validate export path

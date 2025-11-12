@@ -56,26 +56,14 @@ func (r *Round) BuyPhase() {
 }
 
 func (r *Round) RoundStart() {
-	// Simulate the round logic here
-	// For now, we will just randomly determine a winner
-	r.determineWinner()
-
-	// Determine if bomb was planted
-	r.determineBombplant()
+	// Simulate the round using the comprehensive DetermineRoundOutcome function
+	r.determineRoundOutcome()
 
 	//round end logic
 	r.RoundEnd()
 }
 
 func (r *Round) RoundEnd() {
-	//TODO: Create better probabilities. e.g. if no bomb plant and T wins, no CT can survive
-
-	//determine surviving players
-	r.determineSurvivors()
-
-	//determine remaining equipment
-	r.determineRemainingEquipment()
-
 	//determine funds earned
 	r.determineFundsEarned()
 
@@ -142,152 +130,55 @@ func (r *Round) LossBonusCalculation(loserteam *Team) int {
 	return lossBonus
 }
 
-func (r *Round) determineSurvivors() {
-
-	//this is necessary if bomb plant chances are used
-	ctteam_equipment := r.Team1.Equipment
-	tteam_equipment := r.Team2.Equipment
-
-	if r.CTTeam {
-		ctteam_equipment = r.Team2.Equipment
-		tteam_equipment = r.Team1.Equipment
-	}
-
-	// Map round end reason to code for ABM lookup
-	reasonCode := r.mapRoundEndReasonToCode()
-
-	// Calculate CSF probability for winner
-	var csfProb float64
-	if r.WinnerSide { // T wins
-		csfProb = ContestSuccessFunction_simples(tteam_equipment, ctteam_equipment, r.gameRules.CSF_r)
-	} else { // CT wins
-		csfProb = ContestSuccessFunction_simples(ctteam_equipment, tteam_equipment, r.gameRules.CSF_r)
-	}
-
-	// Use ABM models to sample survivors
-	surviving_CT := 0
-	surviving_T := 0
-
-	if r.WinnerSide { // T wins
-		surviving_T = SampleSurvivorsFromABM("T", reasonCode, csfProb)
-		// Losing CT team has fewer/no survivors based on reason
-		if reasonCode == "8" { // Elimination
-			surviving_CT = 0
-		} else {
-			// For bomb explosion scenarios, CT may have some survivors
-			surviving_CT = SampleSurvivorsFromABM("CT", reasonCode, 1.0-csfProb)
-		}
-	} else { // CT wins
-		surviving_CT = SampleSurvivorsFromABM("CT", reasonCode, csfProb)
-		// Losing T team
-		if reasonCode == "8" { // Elimination
-			surviving_T = 0
-		} else {
-			surviving_T = SampleSurvivorsFromABM("T", reasonCode, 1.0-csfProb)
-		}
-	}
-
-	if !r.CTTeam {
-		r.SurvivingT1 = surviving_CT
-		r.SurvivingT2 = surviving_T
-	} else {
-		r.SurvivingT1 = surviving_T
-		r.SurvivingT2 = surviving_CT
-	}
-
-}
-
-// mapRoundEndReasonToCode converts the round end reason string to the code used in ABM models
-func (r *Round) mapRoundEndReasonToCode() string {
-	switch r.RoundEndReason {
-	case "Defused":
-		return "7"
-	case "Exploded":
-		return "9"
-	case "Elimination":
-		return "8"
-	default:
-		return "8" // Default to elimination
-	}
-}
-
-func (r *Round) determineRemainingEquipment() {
-	// Use ABM models to determine equipment saved based on survivors
-	ctteam_equipment := r.Team1.Equipment
-	tteam_equipment := r.Team2.Equipment
-
-	ctSurvivors := r.SurvivingT1
-	tSurvivors := r.SurvivingT2
-
-	if r.CTTeam {
-		ctteam_equipment = r.Team2.Equipment
-		tteam_equipment = r.Team1.Equipment
-		ctSurvivors = r.SurvivingT2
-		tSurvivors = r.SurvivingT1
-	}
-
-	reasonCode := r.mapRoundEndReasonToCode()
-
-	// Sample equipment saved from ABM models
-	equipmentCT := SampleEquipmentSavedFromABM("CT", reasonCode, ctSurvivors)
-	equipmentT := SampleEquipmentSavedFromABM("T", reasonCode, tSurvivors)
-
-	// If ABM returns 0, use fallback calculation based on average equipment per player
-	if equipmentCT == 0 && ctSurvivors > 0 {
-		equipmentCT = (ctteam_equipment / 5) * float64(ctSurvivors) * 0.7 // 70% of average equipment
-	}
-	if equipmentT == 0 && tSurvivors > 0 {
-		equipmentT = (tteam_equipment / 5) * float64(tSurvivors) * 0.7
-	}
-
-	if !r.CTTeam {
-		r.EquipmentT1 = equipmentCT
-		r.EquipmentT2 = equipmentT
-	} else {
-		r.EquipmentT1 = equipmentT
-		r.EquipmentT2 = equipmentCT
-	}
-}
-
-func (r *Round) determineBombplant() {
-	// Placeholder for CSF logic
-
-	ctteam_equipment := r.Team1.Equipment
-	tteam_equipment := r.Team2.Equipment
-
-	if r.CTTeam {
-		ctteam_equipment = r.Team2.Equipment
-		tteam_equipment = r.Team1.Equipment
-	}
-
-	r.BombPlanted = bool_CSF_simple(tteam_equipment, ctteam_equipment, r.gameRules.CSF_r)
-
-}
-
-func (r *Round) determineWinner() {
-	// Use CSF with r = 1.0855 to determine winner
+// determineRoundOutcome uses the comprehensive ABM-based probability function
+// to determine all aspects of the round outcome in one call
+func (r *Round) determineRoundOutcome() {
+	// Get equipment values for CSF calculation
 	team1equipment := r.Team1.Equipment
 	team2equipment := r.Team2.Equipment
 
-	// Determine if Team1 wins using CSF
-	r.WinnerTeam = bool_CSF_simple(team1equipment, team2equipment, r.gameRules.CSF_r)
-
-	// Determine which side won (CT or T)
-	ctWins := false
-	if r.WinnerTeam == r.CTTeam {
-		r.WinnerSide = false // CT wins
-		ctWins = true
+	// Calculate CSF probability - we need CT win probability for the distributions
+	var ctWinProb float64
+	if r.CTTeam {
+		// Team1 is CT, so use team1's win probability
+		ctWinProb = ContestSuccessFunction_simples(team1equipment, team2equipment)
 	} else {
-		r.WinnerSide = true // T wins
-		ctWins = false
+		// Team1 is T, so CT win probability is 1 - team1's win probability
+		ctWinProb = 1.0 - ContestSuccessFunction_simples(team1equipment, team2equipment)
 	}
 
-	// Calculate CSF probability for ABM sampling
-	csfProb := ContestSuccessFunction_simples(team1equipment, team2equipment, r.gameRules.CSF_r)
-	if !ctWins {
-		csfProb = 1.0 - csfProb
+	// Get comprehensive round outcome from ABM distributions (uses CT win probability)
+	outcome := DetermineRoundOutcome(ctWinProb)
+
+	// Determine which team won
+	r.WinnerTeam = !outcome.CTWins
+	if r.CTTeam {
+		// If Team1 is CT, they win when CT wins
+		r.WinnerTeam = !outcome.CTWins
 	}
 
-	// Determine the round end reason using ABM distribution
-	r.RoundEndReason = SampleRoundEndFromABM(ctWins, csfProb)
+	// Set winner side (false = CT, true = T)
+	r.WinnerSide = !outcome.CTWins
+
+	// Set bomb planted status
+	r.BombPlanted = outcome.BombPlanted
+	r.Bombplanted = outcome.BombPlanted
+
+	// Set round end reason
+	r.RoundEndReason = outcome.ReasonName
+
+	// Assign survivors to correct teams based on side assignment
+	if !r.CTTeam {
+		// Team1 is CT, Team2 is T
+		r.SurvivingT1 = outcome.CTSurvivors
+		r.SurvivingT2 = outcome.TSurvivors
+		r.EquipmentT1 = outcome.CTEquipmentSaved
+		r.EquipmentT2 = outcome.TEquipmentSaved
+	} else {
+		// Team1 is T, Team2 is CT
+		r.SurvivingT1 = outcome.TSurvivors
+		r.SurvivingT2 = outcome.CTSurvivors
+		r.EquipmentT1 = outcome.TEquipmentSaved
+		r.EquipmentT2 = outcome.CTEquipmentSaved
+	}
 }

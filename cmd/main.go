@@ -38,6 +38,7 @@ func main() {
 	// Parse command line arguments first to check for custom output path
 	customOutputPath := ""
 	customGameRulesPath := ""
+	customABMModelsPath := ""
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -80,6 +81,11 @@ func main() {
 				customGameRulesPath = args[i+1]
 				i++
 			}
+		case "-a", "--abmmodels":
+			if i+1 < len(args) {
+				customABMModelsPath = args[i+1]
+				i++
+			}
 		case "-h", "--help":
 			printUsage()
 			return
@@ -100,7 +106,7 @@ func main() {
 	}
 
 	// Validate and prepare all customizations before starting simulations
-	customConfig, err := ValidateAndPrepareCustomizations(customGameRulesPath, config.Exportpath)
+	customConfig, err := ValidateAndPrepareCustomizations(customGameRulesPath, customABMModelsPath, config.Exportpath)
 	if err != nil {
 		fmt.Printf("❌ Configuration validation failed: %v\n", err)
 		os.Exit(1)
@@ -165,6 +171,7 @@ func printUsage() {
 	fmt.Println("  -e, --export           Export individual game results as JSON files (works with both modes)")
 	fmt.Println("  -o, --output <path>    Results output directory (default: results_YYYYMMDD_HHMMSS)")
 	fmt.Println("  -g, --gamerules <file> Path to JSON file with custom game rules (default: built-in defaults)")
+	fmt.Println("  -a, --abmmodels <file> Path to ABM models JSON file (default: abm_models.json)")
 	fmt.Println("  -t1, --team1 <strategy> Team 1 strategy (default: all_in)")
 	fmt.Println("  -t2, --team2 <strategy> Team 2 strategy (default: default_half)")
 	fmt.Println("  -h, --help             Print this help message")
