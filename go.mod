@@ -1,4 +1,4 @@
-module github.com/csgo_abm
+module csgo_abm
 
 go 1.18
 

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/csgo_abm/internal/engine"
+	"csgo_abm/internal/engine"
 )
 
 // SimulationStats unified statistics structure for both sequential and concurrent simulations
