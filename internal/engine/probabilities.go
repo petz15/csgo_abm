@@ -10,14 +10,14 @@ import (
 	"strconv"
 )
 
-// ============================================================================
-// Data Structures
-// ============================================================================
-
 // Distributions represents the complete JSON structure for ABM distributions
 type Distributions struct {
 	Metadata struct {
 		CSFRValue float64 `json:"csf_r_value"`
+		CSFRanges struct {
+			Min int `json:"min"`
+			Max int `json:"max"`
+		} `json:"csf_ranges"`
 	} `json:"metadata"`
 
 	Distributions struct {
@@ -52,34 +52,38 @@ type Distributions struct {
 
 // RoundOutcome holds all the results of a round determination
 type RoundOutcome struct {
-	CTWins               bool
-	ReasonCode           string
-	ReasonName           string
-	BombPlanted          bool
-	CTSurvivors          int
-	TSurvivors           int
-	CTEquipmentSaved     float64
-	CTEquipmentPerPlayer float64
-	TEquipmentSaved      float64
-	TEquipmentPerPlayer  float64
+	CTWins                    bool // true if CT wins, false if T wins
+	ReasonCode                int
+	BombPlanted               bool
+	CTSurvivors               int
+	TSurvivors                int
+	CTEquipmentSharePerPlayer []float64
+	TEquipmentSharePerPlayer  []float64
+	CTEquipmentPerPlayer      []float64
+	TEquipmentPerPlayer       []float64
+	CSF                       float64
+	CSFKey                    string
+	StochasticValues          RNG_Outcomes
 }
 
-// ============================================================================
-// Global State
-// ============================================================================
+type RNG_Outcomes struct {
+	RNG_CSF          float64
+	RNG_RoundOutcome float64
+	RNG_Bombplant    float64
+	RNG_SurvivorsCT  float64
+	RNG_SurvivorsT   float64
+	RNG_EquipmentCT  []float64
+	RNG_EquipmentT   []float64
+}
 
 var (
 	distributions       *Distributions
 	distributionsLoaded bool
 )
 
-// ============================================================================
-// Public API - Initialization
-// ============================================================================
-
-// LoadABMModels loads the distributions from JSON file.
+// LoadDistributions loads the distributions from JSON file.
 // Must be called once at application startup before any simulations.
-func LoadABMModels(filePath string) error {
+func LoadDistributions(filePath string) error {
 	if distributionsLoaded {
 		return nil
 	}
@@ -122,13 +126,9 @@ func GetABMModels() *Distributions {
 	return distributions
 }
 
-// ============================================================================
-// Public API - Contest Success Function
-// ============================================================================
-
-// ContestSuccessFunction_simples calculates win probability using Tullock CSF.
+// ContestSuccessFunction calculates win probability using Tullock CSF.
 // Returns the probability that side with expenditure x wins against side with expenditure y.
-func ContestSuccessFunction_simples(x, y float64) float64 {
+func CSF(x float64, y float64) float64 {
 	r := GetCSFRValue()
 	return math.Pow(x, r) / (math.Pow(x, r) + math.Pow(y, r))
 }
@@ -142,38 +142,34 @@ func GetCSFRValue() float64 {
 	return distributions.Metadata.CSFRValue
 }
 
-// ============================================================================
-// Public API - Round Outcome Determination
-// ============================================================================
-
 // DetermineRoundOutcome determines all aspects of a round outcome based on CSF probability.
 // csfProb should be in [0,1], representing the CT win probability.
-func DetermineRoundOutcome(csfProb float64) RoundOutcome {
+func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64) RoundOutcome {
 	assertLoaded("DetermineRoundOutcome")
 
 	outcome := RoundOutcome{}
 
+	outcome.CSF = CSF(ct_eq_val, t_eq_val)
+
 	// 1. Determine winner
-	outcome.CTWins = rand.Float64() < csfProb
+	outcome.StochasticValues.RNG_CSF = rand.Float64()
+	outcome.CTWins = outcome.StochasticValues.RNG_CSF < outcome.CSF
+	side := determineSide(outcome.CTWins)
+
+	outcome.CSFKey = csfKeyForProb(outcome.CSF)
 
 	// 2. Determine round end reason
-	side := determineSide(outcome.CTWins)
-	csfKey := csfKeyForProb(csfProb)
-
-	reasonData := sampleRoundEndReason(side, csfKey)
-	outcome.ReasonCode = strconv.Itoa(reasonData.reason)
-	outcome.ReasonName = reasonData.reasonName
+	sampleRoundEndReason(side, &outcome)
 
 	// 3. Determine bomb planted status
-	outcome.BombPlanted = determineBombPlanted(outcome.ReasonCode, csfKey)
+	determineBombPlanted(&outcome)
 
 	// 4. Determine survivors
 	winningSide := side
 	losingSide := oppositeSide(side)
 
-	winningSurvivors := sampleSurvivors(winningSide, outcome.ReasonCode, csfKey)
-	losingSurvivors := sampleSurvivors(losingSide, outcome.ReasonCode, csfKey)
-
+	winningSurvivors := sampleSurvivors(winningSide, &outcome)
+	losingSurvivors := sampleSurvivors(losingSide, &outcome)
 	if outcome.CTWins {
 		outcome.CTSurvivors = winningSurvivors
 		outcome.TSurvivors = losingSurvivors
@@ -183,15 +179,13 @@ func DetermineRoundOutcome(csfProb float64) RoundOutcome {
 	}
 
 	// 5. Determine equipment saved
-	outcome.CTEquipmentSaved = sampleEquipment("CT", outcome.ReasonCode, outcome.CTSurvivors)
-	if outcome.CTSurvivors > 0 {
-		outcome.CTEquipmentPerPlayer = outcome.CTEquipmentSaved / float64(outcome.CTSurvivors)
-	}
 
-	outcome.TEquipmentSaved = sampleEquipment("T", outcome.ReasonCode, outcome.TSurvivors)
-	if outcome.TSurvivors > 0 {
-		outcome.TEquipmentPerPlayer = outcome.TEquipmentSaved / float64(outcome.TSurvivors)
-	}
+	total_equipment := ct_eq_val + t_eq_val
+	sampleEquipment(winningSide, &outcome)
+	sampleEquipment(losingSide, &outcome)
+
+	// 6. Calculate equipment value per surviving player and making sure, players cant save more than total equipment
+	determineEquipmentSavedPerPlayer(&outcome, total_equipment)
 
 	return outcome
 }
@@ -200,96 +194,114 @@ func DetermineRoundOutcome(csfProb float64) RoundOutcome {
 // Internal Helpers - Distribution Sampling
 // ============================================================================
 
-type roundEndReasonData struct {
-	reason     int
-	reasonName string
-}
-
 // sampleRoundEndReason samples the round end reason from distributions
-func sampleRoundEndReason(side, csfKey string) roundEndReasonData {
+func sampleRoundEndReason(side string, oc *RoundOutcome) {
 	sideMap := distributions.Distributions.RoundEndReason[side]
 	if sideMap == nil {
 		panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: missing round end reason distributions for side='%s'", side))
 	}
 
-	bucket := sideMap[csfKey]
+	bucket := sideMap[oc.CSFKey]
 	if bucket.CumulativeDistribution == nil || len(bucket.CumulativeDistribution) == 0 {
-		panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: missing or empty cumulative distribution for side='%s', csfKey='%s'", side, csfKey))
+		panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: missing or empty cumulative distribution for side='%s', csfKey='%s'", side, oc.CSFKey))
 	}
 
 	randValue := rand.Float64() * 100.0
-	randValue = math.Min(randValue, 99.0) // Ensure it doesn't hit 100.0 exactly, which can cause issues
-	//TODO: fix the issues for 100 value
-	var selected roundEndReasonData
-	minThreshold := math.MaxFloat64
+	oc.StochasticValues.RNG_RoundOutcome = randValue
 
 	for thresholdStr, entry := range bucket.CumulativeDistribution {
 		threshold, err := strconv.ParseFloat(thresholdStr, 64)
 		if err != nil {
-			panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: invalid threshold string '%s' for side='%s', csfKey='%s': %v", thresholdStr, side, csfKey, err))
+			panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: invalid threshold string '%s' for side='%s', csfKey='%s': %v", thresholdStr, side, oc.CSFKey, err))
 		}
 
-		cumulativeThreshold := entry.CumulativeProbability * 100.0
-		if randValue <= cumulativeThreshold && threshold < minThreshold {
-			selected.reason = entry.Reason
-			selected.reasonName = entry.ReasonName
-			minThreshold = threshold
+		if randValue <= threshold {
+			oc.ReasonCode = entry.Reason
 		}
 	}
 
-	if selected.reasonName == "" {
-		panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: failed to sample reason for side='%s', csfKey='%s', randValue=%.2f", side, csfKey, randValue))
+	if oc.ReasonCode == 0 {
+		panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: failed to sample reason for side='%s', csfKey='%s', randValue=%.2f", side, oc.CSFKey, randValue))
 	}
 
-	return selected
 }
 
 // determineBombPlanted determines if bomb was planted based on reason code
-func determineBombPlanted(reasonCode, csfKey string) bool {
+func determineBombPlanted(oc *RoundOutcome) {
 	// Reason codes: 1=Target Bombed, 2=T Win Elimination, 3=CT Win Defuse, 4=CT Win Elimination
-	switch reasonCode {
-	case "1", "3":
-		return true
-	case "2":
+	switch oc.ReasonCode {
+	case 1, 3:
+		oc.BombPlanted = true
+	case 2:
 		// Sample from bomb planted distribution
 		bombMap := distributions.Distributions.BombPlanted.T
 		if bombMap == nil {
 			panic(fmt.Sprintf("probabilities.go: determineBombPlanted: missing bomb planted distribution for T side"))
 		}
-		prob, ok := bombMap[csfKey]
+		prob, ok := bombMap[oc.CSFKey]
 		if !ok {
-			panic(fmt.Sprintf("probabilities.go: determineBombPlanted: missing bomb planted probability for csfKey='%s'", csfKey))
+			panic(fmt.Sprintf("probabilities.go: determineBombPlanted: missing bomb planted probability for csfKey='%s'", oc.CSFKey))
 		}
-		return rand.Float64() < prob
+		oc.StochasticValues.RNG_Bombplant = rand.Float64()
+		oc.BombPlanted = oc.StochasticValues.RNG_Bombplant <= prob
 	default:
-		return false
+		oc.BombPlanted = false
 	}
 }
 
 // sampleSurvivors samples number of survivors from distributions
-func sampleSurvivors(side, reasonCode, csfKey string) int {
+func sampleSurvivors(side string, oc *RoundOutcome) int {
 	sideMap := distributions.Distributions.Survivors[side]
 	if sideMap == nil {
 		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing survivor distributions for side='%s'", side))
 	}
 
-	reasonData := sideMap[reasonCode]
+	reasonData := sideMap[strconv.Itoa(oc.ReasonCode)]
 	if reasonData.CSFDistributions == nil {
-		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing survivor distributions for side='%s', reasonCode='%s'", side, reasonCode))
+		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing survivor distributions for side='%s', reasonCode='%d'", side, oc.ReasonCode))
 	}
 
-	bucket := reasonData.CSFDistributions[csfKey]
+	bucket := reasonData.CSFDistributions[oc.CSFKey]
 	if bucket.CumulativeLookup == nil || len(bucket.CumulativeLookup) == 0 {
-		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing or empty cumulative lookup for side='%s', reasonCode='%s', csfKey='%s'", side, reasonCode, csfKey))
+		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing or empty cumulative lookup for side='%s', reasonCode='%s', csfKey='%s'", side, oc.ReasonCode, oc.CSFKey))
 	}
 
-	return sampleFromCumulativeLookup(bucket.CumulativeLookup)
+	randValue := rand.Float64() * 100.0
+	if side == "CT" {
+		oc.StochasticValues.RNG_SurvivorsCT = randValue
+	} else {
+		oc.StochasticValues.RNG_SurvivorsT = randValue
+	}
+
+	var survivors int = 0
+
+	for thresholdStr, entry := range bucket.CumulativeLookup {
+		threshold, err := strconv.ParseFloat(thresholdStr, 64)
+		if err != nil {
+			panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: invalid threshold string '%s' for side='%s', csfKey='%s': %v", thresholdStr, side, oc.CSFKey, err))
+		}
+
+		if randValue <= threshold {
+			survivors = entry
+		}
+	}
+
+	return survivors
+
 }
 
 // sampleEquipment samples equipment saved value from distributions
-func sampleEquipment(side, reasonCode string, survivors int) float64 {
+func sampleEquipment(side string, oc *RoundOutcome) {
+	var survivors int = 0
+
+	if side == "CT" {
+		survivors = oc.CTSurvivors
+	} else {
+		survivors = oc.TSurvivors
+	}
+
 	if survivors == 0 {
-		return 0.0
+		return
 	}
 
 	sideMap := distributions.Distributions.EquipmentSaved[side]
@@ -297,18 +309,56 @@ func sampleEquipment(side, reasonCode string, survivors int) float64 {
 		panic(fmt.Sprintf("probabilities.go: sampleEquipment: missing equipment saved distributions for side='%s'", side))
 	}
 
-	reasonData := sideMap[reasonCode]
+	var reasonCodeStr string = strconv.Itoa(oc.ReasonCode)
+	reasonData := sideMap[reasonCodeStr]
 	if reasonData.SurvivorDistributions == nil {
-		panic(fmt.Sprintf("probabilities.go: sampleEquipment: missing equipment saved distributions for side='%s', reasonCode='%s'", side, reasonCode))
+		panic(fmt.Sprintf("probabilities.go: sampleEquipment: missing equipment saved distributions for side='%s', reasonCode='%s'", side, oc.ReasonCode))
 	}
 
 	survivorKey := strconv.Itoa(survivors)
 	survivorDist := reasonData.SurvivorDistributions[survivorKey]
 	if survivorDist.ECDFLookup == nil || len(survivorDist.ECDFLookup) == 0 {
-		panic(fmt.Sprintf("probabilities.go: sampleEquipment: missing or empty ECDF lookup for side='%s', reasonCode='%s', survivors=%d", side, reasonCode, survivors))
+		panic(fmt.Sprintf("probabilities.go: sampleEquipment: missing or empty ECDF lookup for side='%s', reasonCode='%s', survivors=%d", side, oc.ReasonCode, survivors))
 	}
 
-	return sampleFromECDFLookup(survivorDist.ECDFLookup)
+	saved_eq_pct := 0.0
+	for i := 0; i < survivors; i++ {
+		if side == "CT" {
+			oc.StochasticValues.RNG_EquipmentCT = append(oc.StochasticValues.RNG_EquipmentCT, rand.Float64())
+			saved_eq_pct = sampleFromECDFLookup(survivorDist.ECDFLookup, oc.StochasticValues.RNG_EquipmentCT[i])
+			oc.CTEquipmentSharePerPlayer = append(oc.CTEquipmentSharePerPlayer, saved_eq_pct)
+		} else {
+			oc.StochasticValues.RNG_EquipmentT = append(oc.StochasticValues.RNG_EquipmentT, rand.Float64())
+			saved_eq_pct = sampleFromECDFLookup(survivorDist.ECDFLookup, oc.StochasticValues.RNG_EquipmentT[i])
+			oc.TEquipmentSharePerPlayer = append(oc.TEquipmentSharePerPlayer, saved_eq_pct)
+		}
+	}
+
+}
+
+func determineEquipmentSavedPerPlayer(oc *RoundOutcome, total_equipment float64) {
+
+	if sumArray(oc.CTEquipmentSharePerPlayer)+sumArray(oc.TEquipmentSharePerPlayer) > 1.0 {
+		// Normalize shares
+		total_share := sumArray(oc.CTEquipmentSharePerPlayer) + sumArray(oc.TEquipmentSharePerPlayer)
+		for i := range oc.CTEquipmentSharePerPlayer {
+			oc.CTEquipmentSharePerPlayer[i] /= total_share
+		}
+		for i := range oc.TEquipmentSharePerPlayer {
+			oc.TEquipmentSharePerPlayer[i] /= total_share
+		}
+	}
+
+	for _, share := range oc.CTEquipmentSharePerPlayer {
+		eq_value := share * total_equipment
+		oc.CTEquipmentPerPlayer = append(oc.CTEquipmentPerPlayer, eq_value)
+	}
+
+	for _, share := range oc.TEquipmentSharePerPlayer {
+		eq_value := share * total_equipment
+		oc.TEquipmentPerPlayer = append(oc.TEquipmentPerPlayer, eq_value)
+	}
+
 }
 
 // ============================================================================
@@ -322,14 +372,15 @@ func assertLoaded(functionName string) {
 	}
 }
 
-// csfKeyForProb converts probability [0,1] to CSF key string [2-97]
+// the csfKey in the distribution is limited as some values do not exist (e.g., 0, 1, 98, 99, 100)
+// values which do not exist between min and max have been interpolated when calculating the distributions
+// csfKeyForProb converts probability [0,1] to CSF key string [min-max]
 func csfKeyForProb(prob float64) string {
 	csfPercent := int(math.Round(prob * 100))
-	if csfPercent < 2 {
-		csfPercent = 2
-	}
-	if csfPercent > 97 {
-		csfPercent = 97
+	if csfPercent < distributions.Metadata.CSFRanges.Min {
+		csfPercent = distributions.Metadata.CSFRanges.Min
+	} else if csfPercent > distributions.Metadata.CSFRanges.Max {
+		csfPercent = distributions.Metadata.CSFRanges.Max
 	}
 	return strconv.Itoa(csfPercent)
 }
@@ -350,30 +401,9 @@ func oppositeSide(side string) string {
 	return "CT"
 }
 
-// sampleFromCumulativeLookup samples from a cumulative distribution lookup table
-func sampleFromCumulativeLookup(lookup map[string]int) int {
-	randValue := int(math.Floor(rand.Float64() * 100))
-	bestThreshold := -1
-	result := 0
-
-	for thresholdStr, value := range lookup {
-		threshold, err := strconv.Atoi(thresholdStr)
-		if err != nil {
-			continue
-		}
-		if threshold <= randValue && threshold > bestThreshold {
-			bestThreshold = threshold
-			result = value
-		}
-	}
-
-	return result
-}
-
 // sampleFromECDFLookup samples from an ECDF lookup table
-func sampleFromECDFLookup(lookup map[string]float64) float64 {
-	randPercentile := rand.Float64() * 100.0
-	bestPercentile := -1.0
+func sampleFromECDFLookup(lookup map[string]float64, RNG_Eq float64) float64 {
+	randPercentile := RNG_Eq * 100.0
 	result := 0.0
 
 	for percentileStr, value := range lookup {
@@ -381,11 +411,21 @@ func sampleFromECDFLookup(lookup map[string]float64) float64 {
 		if err != nil {
 			continue
 		}
-		if percentile <= randPercentile && percentile > bestPercentile {
-			bestPercentile = percentile
+		if percentile <= randPercentile {
 			result = value
+		} else {
+			break
 		}
+
 	}
 
 	return result
+}
+
+func sumArray(arr []float64) float64 {
+	sum := 0.0
+	for _, val := range arr {
+		sum += val
+	}
+	return sum
 }

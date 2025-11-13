@@ -20,7 +20,7 @@ func ValidateAndPrepareCustomizations(gameRulesPath, abmModelsPath, exportPath s
 
 	// Load ABM models first (mandatory for simulations to run)
 	fmt.Println("🔧 Loading ABM probability models...")
-	if err := engine.LoadABMModels(abmModelsPath); err != nil {
+	if err := engine.LoadDistributions(abmModelsPath); err != nil {
 		return nil, fmt.Errorf("failed to load ABM models (required): %w", err)
 	}
 	if abmModelsPath != "" {

@@ -68,7 +68,7 @@ func StartGame_default(team1Name string, team1Strategy string, team2Name string,
 	// Extract results directly from the game object
 	result := &GameResult{
 		GameID:         ID,
-		Team1Won:       !game.WinnerTeam, // WinnerTeam is false if Team1 wins
+		Team1Won:       game.Is_T1_Winner,
 		Team1Score:     game.Score[0],
 		Team2Score:     game.Score[1],
 		TotalRounds:    len(game.Rounds),

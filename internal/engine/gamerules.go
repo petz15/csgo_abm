@@ -9,10 +9,12 @@ import (
 type GameRules struct {
 	DefaultEquipment float64 `json:"defaultEquipment"` // Default equipment cost
 	OTFunds          float64 `json:"otFunds"`          // Overtime funds
+	OTEquipment      float64 `json:"otEquipment"`      // Overtime equipment cost
 	StartingFunds    float64 `json:"startingFunds"`    // Starting funds for teams
 	HalfLength       int     `json:"halfLength"`       // Length of a half in rounds
 	OTHalfLength     int     `json:"otHalfLength"`     // Length of overtime half in rounds
 	MaxFunds         float64 `json:"maxFunds"`         // Maximum funds allowed for a team
+	LossBonusCalc    bool    `json:"lossBonusCalc"`    // true: loss bonus reduced 1 after each win, false: resets after each win
 }
 
 // getDefaultRules returns the default game rules configuration
@@ -20,10 +22,12 @@ func getDefaultRules() GameRules {
 	return GameRules{
 		DefaultEquipment: 200,
 		OTFunds:          10000,
+		OTEquipment:      200,
 		StartingFunds:    800,
 		HalfLength:       15,
 		OTHalfLength:     3,      // Default value for Overtime half length
 		MaxFunds:         999999, // Default value for Maximum funds
+		LossBonusCalc:    true,
 	}
 }
 
@@ -43,6 +47,11 @@ func validateGameRulesStrict(rules GameRules) bool {
 		return false
 	}
 
+	if rules.OTEquipment < 0 {
+		fmt.Println("Overtime equipment must be non-negative")
+		return false
+	}
+
 	if rules.MaxFunds < 0 {
 		fmt.Println("Maximum funds must be non-negative")
 		return false
@@ -55,6 +64,11 @@ func validateGameRulesStrict(rules GameRules) bool {
 	}
 	if rules.OTHalfLength <= 0 {
 		fmt.Println("Overtime half length must be positive")
+		return false
+	}
+
+	if rules.LossBonusCalc != true && rules.LossBonusCalc != false {
+		fmt.Println("Loss bonus calculation flag must be true or false")
 		return false
 	}
 
@@ -89,6 +103,9 @@ func NewGameRules(pathtoFile string) (GameRules, bool) {
 		if jsonRules.DefaultEquipment > 0 {
 			candidateRules.DefaultEquipment = jsonRules.DefaultEquipment
 		}
+		if jsonRules.OTEquipment > 0 {
+			candidateRules.OTEquipment = jsonRules.OTEquipment
+		}
 		if jsonRules.OTFunds > 0 {
 			candidateRules.OTFunds = jsonRules.OTFunds
 		}
@@ -103,6 +120,9 @@ func NewGameRules(pathtoFile string) (GameRules, bool) {
 		}
 		if jsonRules.MaxFunds > 0 {
 			candidateRules.MaxFunds = jsonRules.MaxFunds
+		}
+		if jsonRules.LossBonusCalc == true || jsonRules.LossBonusCalc == false {
+			candidateRules.LossBonusCalc = jsonRules.LossBonusCalc
 		}
 
 		// Strict validation - if ANY value fails, use all defaults

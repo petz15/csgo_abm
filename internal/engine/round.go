@@ -1,24 +1,15 @@
 package engine
 
+import "math"
+
 type Round struct {
-	RoundNumber    int
-	Team1          *Team
-	Team2          *Team
-	CTTeam         bool // false if Team1 is CT
-	WinnerTeam     bool //False if Team1 wins, true if Team2 wins
-	WinnerSide     bool // false if CT wins, true if T wins
-	BombPlanted    bool
-	RoundEndReason string // "Elimination", "Defused", "Exploded"
-	Sideswitch     bool   // True if sideswitch has occurred
-	Bombplanted    bool
-	gameRules      *GameRules
-	SurvivingT1    int     // Number of surviving T1 players
-	SurvivingT2    int     // Number of surviving T2 players
-	EquipmentT1    float64 // Total equipment value for T1 team
-	EquipmentT2    float64 // Total equipment value for T2 team
-	FundsearnedT1  float64 // Total funds earned by T1 team
-	FundsearnedT2  float64 // Total funds earned by T2 team
-	OT             bool    // True if this is an overtime round
+	RoundNumber      int
+	is_T1_CT         bool // true if Team1 is CT, false if Team1 is T
+	Calc_Outcome     RoundOutcome
+	is_T1_WinnerTeam bool //true if Team1 wins, false if Team2 wins
+	Sideswitch       bool // True if sideswitch has occurred
+	gameRules        *GameRules
+	OT               bool // True if this is an overtime round
 }
 
 func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules, ot bool) *Round {
@@ -27,102 +18,154 @@ func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, 
 	T2.NewRound()
 
 	return &Round{
-		Team1:         T1,
-		Team2:         T2,
-		CTTeam:        ctteam,
-		RoundNumber:   roundNumber,
-		WinnerTeam:    false,
-		WinnerSide:    false,
-		BombPlanted:   false,
-		Sideswitch:    sidewitch,
-		Bombplanted:   false,
-		gameRules:     gamerules,
-		SurvivingT1:   0,
-		SurvivingT2:   0,
-		EquipmentT1:   0,
-		EquipmentT2:   0,
-		FundsearnedT1: 0,
-		FundsearnedT2: 0,
-		OT:            ot,
+		RoundNumber: roundNumber,
+		is_T1_CT:    ctteam,
+		Sideswitch:  sidewitch,
+		gameRules:   gamerules,
+		OT:          ot,
 	}
 }
 
 // solution for what information gets passed to the teams, could be a json file in the gamerules which specifies
 // which variables are passed to the teams. No clue how this will be done yet, but it is an idea.
-func (r *Round) BuyPhase() {
-	r.Team1.BuyPhase(r.RoundNumber, r.OT, r.Team2, *r.gameRules) // Call the team's buy phase logic
-	r.Team2.BuyPhase(r.RoundNumber, r.OT, r.Team1, *r.gameRules)
+func (r *Round) BuyPhase(Team1 *Team, Team2 *Team) {
+	Team1.BuyPhase(r.RoundNumber, r.OT, Team2, *r.gameRules) // Call the team's buy phase logic
+	Team2.BuyPhase(r.RoundNumber, r.OT, Team1, *r.gameRules)
 
 }
 
-func (r *Round) RoundStart() {
+func (r *Round) RoundStart(Team1 *Team, Team2 *Team) {
 	// Simulate the round using the comprehensive DetermineRoundOutcome function
-	r.determineRoundOutcome()
+	r.determineRoundOutcome(Team1, Team2)
 
-	//round end logic
-	r.RoundEnd()
 }
 
-func (r *Round) RoundEnd() {
+func (r *Round) RoundEnd(Team1 *Team, Team2 *Team) {
 	//determine funds earned
-	r.determineFundsEarned()
+	r.determineFundsEarned(Team1, Team2)
 
 	//update Teams
-	r.Team1.RoundEnd(!r.WinnerTeam, r.FundsearnedT1, r.SurvivingT1, r.EquipmentT1)
-	r.Team2.RoundEnd(r.WinnerTeam, r.FundsearnedT2, r.SurvivingT2, r.EquipmentT2)
+	Team1.RoundEnd(r.is_T1_WinnerTeam)
+	Team2.RoundEnd(!r.is_T1_WinnerTeam)
 }
 
-func (r *Round) determineFundsEarned() {
+func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
+	// Determine funds earned based on round outcome
+	// https://counterstrike.fandom.com/wiki/Money -> be sure to check CSGO values
+	winnerFunds := 0.0
+	loserFunds := 0.0
 
-	// Determine which team is CT and which is T
-	winnerFunds := 3250 * 5
-	loserBonusFunds := 0
-
-	if r.BombPlanted {
-		winnerFunds = 3500 * 5
+	switch r.Calc_Outcome.ReasonCode {
+	case 1:
+		winnerFunds += 3500 * 5 //bomb exploded
+		winnerFunds += 300      //plant bonus
+	case 2:
+		winnerFunds += 3250 * 5
+		if r.Calc_Outcome.BombPlanted { //plant bonus
+			winnerFunds += 300
+		}
+	case 3:
+		winnerFunds += 3500 * 5
+		winnerFunds += 300            //defuse bonus
+		loserFunds += (800 * 5) + 300 //bomb planted bonus
+	case 4:
+		winnerFunds += 3250 * 5
 	}
 
-	// Funds earned by killing players
-	r.FundsearnedT1 = float64((5 - r.SurvivingT2) * 300) // 300 per player killed
-	r.FundsearnedT2 = float64((5 - r.SurvivingT1) * 300) // 300 per player killed
-
-	if r.BombPlanted && r.WinnerSide {
-		winnerFunds += 300 // Add bonus for winning team
-	} else if r.BombPlanted && !r.WinnerSide {
-		winnerFunds += 300    // Add bonus for winning team
-		loserBonusFunds = 300 // Add bonus for losing team
-	}
-
-	if !r.WinnerTeam {
-		r.FundsearnedT1 += float64(winnerFunds)
-		loserBonusFunds += r.LossBonusCalculation(r.Team2) // Calculate loss bonus for T2
-		r.FundsearnedT2 += float64(loserBonusFunds * 5)
+	var ctteam *Team
+	var tteam *Team
+	if r.is_T1_CT {
+		ctteam = Team1
+		tteam = Team2
+		//while we're here, set RE EQ values i.e. saved equipment values
+		Team1.SetREEqValue(sumArray(r.Calc_Outcome.CTEquipmentPerPlayer))
+		Team2.SetREEqValue(sumArray(r.Calc_Outcome.TEquipmentPerPlayer))
 	} else {
-		r.FundsearnedT2 += float64(winnerFunds)
-		loserBonusFunds += r.LossBonusCalculation(r.Team1) // Calculate loss bonus for T1
-		r.FundsearnedT1 += float64(loserBonusFunds * 5)
+		ctteam = Team2
+		tteam = Team1
+		//while we're here, set RE EQ values i.e. saved equipment values
+		Team1.SetREEqValue(sumArray(r.Calc_Outcome.TEquipmentPerPlayer))
+		Team2.SetREEqValue(sumArray(r.Calc_Outcome.CTEquipmentPerPlayer))
 	}
 
+	var lossbonus int
+	//Loser bonus evaluation
+	if r.Calc_Outcome.CTWins {
+		lossbonus = r.LossBonusCalculation(tteam)
+	} else {
+		lossbonus = r.LossBonusCalculation(ctteam)
+	}
+
+	if r.gameRules.LossBonusCalc == true {
+		if r.Calc_Outcome.CTWins {
+			tteam.SetCurrentLossBonusLevel(tteam.GetCurrentLossBonusLevel() + 1)
+			ctteam.SetCurrentLossBonusLevel(ctteam.GetCurrentLossBonusLevel() - 1)
+		} else {
+			ctteam.SetCurrentLossBonusLevel(ctteam.GetCurrentLossBonusLevel() + 1)
+			tteam.SetCurrentLossBonusLevel(tteam.GetCurrentLossBonusLevel() - 1)
+		}
+	} else {
+		if r.Calc_Outcome.CTWins {
+			tteam.SetCurrentLossBonusLevel(tteam.GetCurrentLossBonusLevel() + 1)
+			ctteam.SetCurrentLossBonusLevel(0)
+		} else {
+			ctteam.SetCurrentLossBonusLevel(ctteam.GetCurrentLossBonusLevel() + 1)
+			tteam.SetCurrentLossBonusLevel(0)
+		}
+	}
+
+	// Kills and loss bonus
+
+	if r.Calc_Outcome.CTWins {
+		loserFunds += (5 - float64(r.Calc_Outcome.CTSurvivors)) * 300
+		winnerFunds += (5 - float64(r.Calc_Outcome.TSurvivors)) * 300
+
+		// Add loss bonus to losing team
+		// Reduction for surviving T players if round end reason is 4
+		reduction := 0
+		if r.Calc_Outcome.ReasonCode == 4 {
+			reduction = r.Calc_Outcome.TSurvivors
+		}
+		loserFunds += float64(lossbonus) * float64(5-reduction)
+	} else {
+		loserFunds += (5 - float64(r.Calc_Outcome.TSurvivors)) * 300
+		winnerFunds += (5 - float64(r.Calc_Outcome.CTSurvivors)) * 300
+
+		// Add loss bonus to losing team
+		loserFunds += float64(lossbonus) * 5
+	}
+
+	FundsearnedT1 := 0.0
+	FundsearnedT2 := 0.0
+
+	if r.is_T1_WinnerTeam {
+		FundsearnedT1 = winnerFunds
+		FundsearnedT2 = loserFunds
+	} else {
+		FundsearnedT1 = loserFunds
+		FundsearnedT2 = winnerFunds
+	}
 	// Ensure funds do not exceed maximum allowed
-	if r.Team1.Funds+r.FundsearnedT1 > r.gameRules.MaxFunds {
-		r.FundsearnedT1 = r.gameRules.MaxFunds - r.Team1.Funds
-	}
-	if r.Team2.Funds+r.FundsearnedT2 > r.gameRules.MaxFunds {
-		r.FundsearnedT2 = r.gameRules.MaxFunds - r.Team2.Funds
-	}
 
+	Team1.SetEarned(FundsearnedT1)
+	Team1.SetFunds(math.Min(Team1.GetCurrentFunds(), r.gameRules.MaxFunds))
+
+	Team2.SetEarned(FundsearnedT2)
+	Team2.SetFunds(math.Min(Team2.GetCurrentFunds(), r.gameRules.MaxFunds))
 }
 
 func (r *Round) LossBonusCalculation(loserteam *Team) int {
 	// Calculate loss bonus based on consecutive losses
+
 	lossBonus := 0
-	if loserteam.Consecutiveloss >= 4 {
+	lossbonuslevel := loserteam.GetCurrentLossBonusLevel()
+	if lossbonuslevel >= 4 {
 		lossBonus = 3400 //Loss bonus for 5th loss and beyond
-	} else if loserteam.Consecutiveloss == 3 {
+	} else if lossbonuslevel == 3 {
 		lossBonus = 2900 // Loss bonus for fourth loss
-	} else if loserteam.Consecutiveloss == 2 {
+	} else if lossbonuslevel == 2 {
 		lossBonus = 2400 // Loss bonus for third loss
-	} else if loserteam.Consecutiveloss == 1 {
+	} else if lossbonuslevel == 1 {
 		lossBonus = 1900 // Loss bonus for second loss
 	} else {
 		lossBonus = 1400 // Loss bonus for first loss
@@ -132,53 +175,28 @@ func (r *Round) LossBonusCalculation(loserteam *Team) int {
 
 // determineRoundOutcome uses the comprehensive ABM-based probability function
 // to determine all aspects of the round outcome in one call
-func (r *Round) determineRoundOutcome() {
+func (r *Round) determineRoundOutcome(Team1 *Team, Team2 *Team) {
 	// Get equipment values for CSF calculation
-	team1equipment := r.Team1.Equipment
-	team2equipment := r.Team2.Equipment
 
-	// Calculate CSF probability - we need CT win probability for the distributions
-	var ctWinProb float64
-	if r.CTTeam {
-		// Team1 is CT, so use team1's win probability
-		ctWinProb = ContestSuccessFunction_simples(team1equipment, team2equipment)
+	ctequipment := 0.0
+	tequipment := 0.0
+
+	if r.is_T1_CT {
+		ctequipment = Team1.RoundData[r.RoundNumber-1].FTE_Eq_value
+		tequipment = Team2.RoundData[r.RoundNumber-1].FTE_Eq_value
 	} else {
-		// Team1 is T, so CT win probability is 1 - team1's win probability
-		ctWinProb = 1.0 - ContestSuccessFunction_simples(team1equipment, team2equipment)
+		ctequipment = Team2.RoundData[r.RoundNumber-1].FTE_Eq_value
+		tequipment = Team1.RoundData[r.RoundNumber-1].FTE_Eq_value
 	}
 
 	// Get comprehensive round outcome from ABM distributions (uses CT win probability)
-	outcome := DetermineRoundOutcome(ctWinProb)
+	outcome := DetermineRoundOutcome(ctequipment, tequipment)
 
 	// Determine which team won
-	r.WinnerTeam = !outcome.CTWins
-	if r.CTTeam {
+	r.is_T1_WinnerTeam = !outcome.CTWins
+	if r.is_T1_CT {
 		// If Team1 is CT, they win when CT wins
-		r.WinnerTeam = !outcome.CTWins
+		r.is_T1_WinnerTeam = outcome.CTWins
 	}
 
-	// Set winner side (false = CT, true = T)
-	r.WinnerSide = !outcome.CTWins
-
-	// Set bomb planted status
-	r.BombPlanted = outcome.BombPlanted
-	r.Bombplanted = outcome.BombPlanted
-
-	// Set round end reason
-	r.RoundEndReason = outcome.ReasonName
-
-	// Assign survivors to correct teams based on side assignment
-	if !r.CTTeam {
-		// Team1 is CT, Team2 is T
-		r.SurvivingT1 = outcome.CTSurvivors
-		r.SurvivingT2 = outcome.TSurvivors
-		r.EquipmentT1 = outcome.CTEquipmentSaved
-		r.EquipmentT2 = outcome.TEquipmentSaved
-	} else {
-		// Team1 is T, Team2 is CT
-		r.SurvivingT1 = outcome.TSurvivors
-		r.SurvivingT2 = outcome.CTSurvivors
-		r.EquipmentT1 = outcome.TEquipmentSaved
-		r.EquipmentT2 = outcome.CTEquipmentSaved
-	}
 }
