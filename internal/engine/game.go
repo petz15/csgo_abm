@@ -6,7 +6,7 @@ import (
 )
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//CAUTION There is currently a max number of overtime set to 300. Meaning an overtime can have max 15 * 2 + 300 * 6= 1830 rounds.
+//CAUTION There is currently a max number of overtime set to 50. Meaning an overtime can have max 15 * 2 + 50 * 6= 330 rounds.
 //This is a temporary solution to prevent infinite loops in the game simulation.
 
 type Game struct {
@@ -38,6 +38,7 @@ func NewGame(id string, Team1Name string, Team1Strategy string, Team2Name string
 		ID:             id,
 		Team1:          Team_1,
 		Team2:          Team_2,
+		is_T1_CT:       currentCT,
 		CurrentRound:   1,
 		OT:             false,
 		OTcounter:      0,
@@ -68,7 +69,11 @@ func (g *Game) Start() {
 
 		g.UpdateScore(round.is_T1_WinnerTeam)
 
+		// Clear round pointer to help GC
+		round = nil
+
 		g.sideswitch = false
+		g.CurrentRound++
 		g.GameFinished()
 
 	}
@@ -118,7 +123,7 @@ func (g *Game) GameFinished() {
 			g.Is_T1_Winner = true // Team2 wins
 		}
 		//CAUTION WITH THE NEXT PART, THIS DEFINES THE MAXIMUM NUMBER OF ROUNDS IN OVERTIME
-	} else if g.OTcounter > 300 {
+	} else if g.OTcounter > 50 {
 		// If the game has gone on for too long, end it
 		g.GameinProgress = false
 		g.Is_T1_Winner = rand.Intn(2) == 0 // Randomly decide a winner
@@ -132,4 +137,16 @@ func (g *Game) UpdateScore(winner bool) {
 	} else {
 		g.Score[1]++
 	}
+}
+
+// Cleanup clears memory-intensive data structures after game completion
+func (g *Game) Cleanup() {
+	if g.Team1 != nil {
+		g.Team1.Cleanup()
+	}
+	if g.Team2 != nil {
+		g.Team2.Cleanup()
+	}
+	// Don't clear Rounds if exporting, but can be cleared after export
+	// g.Rounds = nil
 }

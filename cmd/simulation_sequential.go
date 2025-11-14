@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -21,6 +22,39 @@ func updateglobalstats(stats *analysis.SimulationStats, result *GameResult) {
 		result.WentToOvertime,
 		0, // responseTime - not tracked in sequential mode
 	)
+
+	// Convert and update economic statistics
+	team1Econ := analysis.TeamGameEconomics{
+		TotalSpent:       result.Team1Economics.TotalSpent,
+		TotalEarned:      result.Team1Economics.TotalEarned,
+		AverageFunds:     result.Team1Economics.AverageFunds,
+		AverageRSEq:      result.Team1Economics.AverageRSEq,
+		AverageFTEEq:     result.Team1Economics.AverageFTEEq,
+		AverageREEq:      result.Team1Economics.AverageREEq,
+		AverageSurvivors: result.Team1Economics.AverageSurvivors,
+		MaxFunds:         result.Team1Economics.MaxFunds,
+		MinFunds:         result.Team1Economics.MinFunds,
+		FullBuyRounds:    result.Team1Economics.FullBuyRounds,
+		EcoRounds:        result.Team1Economics.EcoRounds,
+		ForceBuyRounds:   result.Team1Economics.ForceBuyRounds,
+		MaxConsecLosses:  result.Team1Economics.MaxConsecLosses,
+	}
+	team2Econ := analysis.TeamGameEconomics{
+		TotalSpent:       result.Team2Economics.TotalSpent,
+		TotalEarned:      result.Team2Economics.TotalEarned,
+		AverageFunds:     result.Team2Economics.AverageFunds,
+		AverageRSEq:      result.Team2Economics.AverageRSEq,
+		AverageFTEEq:     result.Team2Economics.AverageFTEEq,
+		AverageREEq:      result.Team2Economics.AverageREEq,
+		AverageSurvivors: result.Team2Economics.AverageSurvivors,
+		MaxFunds:         result.Team2Economics.MaxFunds,
+		MinFunds:         result.Team2Economics.MinFunds,
+		FullBuyRounds:    result.Team2Economics.FullBuyRounds,
+		EcoRounds:        result.Team2Economics.EcoRounds,
+		ForceBuyRounds:   result.Team2Economics.ForceBuyRounds,
+		MaxConsecLosses:  result.Team2Economics.MaxConsecLosses,
+	}
+	stats.UpdateEconomicStats(team1Econ, team2Econ, result.TotalRounds)
 }
 
 func showstats(stats *analysis.SimulationStats) {
@@ -47,7 +81,7 @@ func exportSummary_v2(stats *analysis.SimulationStats, pathOrID string) error {
 }
 
 // sequentialsimulationWithRules is an optimized version that uses pre-validated GameRules
-func sequentialsimulation(config analysis.SimulationConfig, gameRules engine.GameRules) error {
+func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) error {
 	starttime := time.Now()
 	stats := analysis.NewStats(config.NumSimulations, "sequential")
 
@@ -70,7 +104,7 @@ func sequentialsimulation(config analysis.SimulationConfig, gameRules engine.Gam
 
 		// Simulate a single game with pre-validated rules
 		result, err := StartGame_default(config.Team1Name, config.Team1Strategy, config.Team2Name,
-			config.Team2Strategy, gameRules, simPrefix, config.ExportDetailedResults, config.Exportpath)
+			config.Team2Strategy, gameRules, simPrefix, config.ExportDetailedResults, false, config.Exportpath)
 		if err != nil {
 			fmt.Printf("Simulation %d failed: %v\n", i+1, err)
 			continue
@@ -78,6 +112,11 @@ func sequentialsimulation(config analysis.SimulationConfig, gameRules engine.Gam
 
 		// Update statistics with the result
 		updateglobalstats(stats, result)
+
+		// Periodic garbage collection every 100 simulations
+		if (i+1)%100 == 0 {
+			runtime.GC()
+		}
 
 		// Progress reporting for large runs
 		if config.NumSimulations > 100 && (i+1)%100 == 0 {

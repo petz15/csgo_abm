@@ -14,6 +14,7 @@ type Team_RoundData struct {
 	RS_Eq_value     float64 // Round start equipment value
 	FTE_Eq_value    float64 // Freeze time end equipment value (after buy phase)
 	RE_Eq_value     float64 // Round end equipment value
+	Survivors       int     // Number of surviving players at the end of the round
 	Score_Start     int
 	Score_End       int     //updated at the end of the round
 	Consecutiveloss int     // Consecutive losses for the team, updated at the end of the round
@@ -30,6 +31,7 @@ func NewTeam(name string, startingfunds float64, side bool, defaultequipment flo
 		RS_Eq_value:     5 * defaultequipment,
 		FTE_Eq_value:    0,
 		RE_Eq_value:     0,
+		Survivors:       0,
 		Score_Start:     0,
 		Score_End:       0,
 		Consecutiveloss: 0,
@@ -44,16 +46,17 @@ func NewTeam(name string, startingfunds float64, side bool, defaultequipment flo
 	}
 }
 
-func (t *Team) NewRound() {
+func (t *Team) NewRound(defaultequipment float64) {
 	// Create a new round data entry for the team
 	previousRound := t.RoundData[len(t.RoundData)-1]
 	newRoundData := Team_RoundData{
 		is_Side_CT:      previousRound.is_Side_CT,
 		Funds:           previousRound.Funds,
 		Earned:          0,
-		RS_Eq_value:     previousRound.RE_Eq_value,
+		RS_Eq_value:     previousRound.RE_Eq_value + (float64(5-previousRound.Survivors) * defaultequipment),
 		FTE_Eq_value:    0,
 		RE_Eq_value:     0,
+		Survivors:       0,
 		Score_Start:     previousRound.Score_End,
 		Score_End:       previousRound.Score_End,
 		Consecutiveloss: previousRound.Consecutiveloss,
@@ -71,6 +74,7 @@ func (t *Team) RoundEnd(winner bool) {
 	} else {
 		RD.Consecutiveloss++
 	}
+
 }
 
 func (t *Team) NewOT(OTfunds float64, OTEquipment float64) {
@@ -79,7 +83,7 @@ func (t *Team) NewOT(OTfunds float64, OTEquipment float64) {
 }
 
 func (t *Team) Sideswitch(OT bool, startingfunds float64, defaultEquipment float64, OTfunds float64, OTEquipment float64) {
-	t.NewRound()
+	t.NewRound(defaultEquipment)
 	t.RoundData[len(t.RoundData)-1].is_Side_CT = !t.RoundData[len(t.RoundData)-1].is_Side_CT // Switch side if needed
 	if OT {
 		t.NewOT(OTfunds, OTEquipment)
@@ -104,7 +108,7 @@ func (t *Team) SpendFunds(amount float64) {
 	if amount <= RD.Funds {
 		RD.Funds -= amount
 		RD.Spent += amount
-		RD.RS_Eq_value += amount
+		RD.FTE_Eq_value += amount + t.GetRSEquipment()
 	} else {
 		// Handle insufficient funds
 	}
@@ -165,4 +169,19 @@ func (t *Team) GetSide() bool {
 func (t *Team) GetRSEquipment() float64 {
 	RD := &t.RoundData[len(t.RoundData)-1]
 	return float64(RD.RS_Eq_value)
+}
+
+// Cleanup clears historical round data to free memory
+// Should only be called after game is complete and results are extracted
+func (t *Team) Cleanup() {
+	// Keep only the last round's data for final state
+	if len(t.RoundData) > 0 {
+		lastRound := t.RoundData[len(t.RoundData)-1]
+		t.RoundData = []Team_RoundData{lastRound}
+	}
+}
+
+func (t *Team) SetSurvivors(survivors int) {
+	RD := &t.RoundData[len(t.RoundData)-1]
+	RD.Survivors = survivors
 }

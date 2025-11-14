@@ -1,12 +1,9 @@
 package analysis
 
 import (
-	"fmt"
-	"runtime"
+	"csgo_abm/internal/engine"
 	"sync"
 	"time"
-
-	"csgo_abm/internal/engine"
 )
 
 // SimulationStats unified statistics structure for both sequential and concurrent simulations
@@ -27,6 +24,10 @@ type SimulationStats struct {
 	Team2WinRate  float64 `json:"team2_win_rate"`
 	AverageRounds float64 `json:"average_rounds"`
 	OvertimeRate  float64 `json:"overtime_rate"`
+
+	// Economic statistics
+	Team1EconomicStats TeamEconomicStats `json:"team1_economic_stats"`
+	Team2EconomicStats TeamEconomicStats `json:"team2_economic_stats"`
 
 	// Performance metrics (optional for sequential)
 	ExecutionTime   time.Duration `json:"execution_time"`
@@ -85,6 +86,26 @@ type ScoreLine struct {
 	Frequency float64 `json:"frequency"`
 }
 
+// TeamEconomicStats contains aggregate economic statistics for a team across all simulations
+type TeamEconomicStats struct {
+	TotalSpent           float64 `json:"total_spent"`
+	AverageSpent         float64 `json:"average_spent_per_game"`
+	AverageSpentPerRound float64 `json:"average_spent_per_round"`
+	TotalEarned          float64 `json:"total_earned"`
+	AverageEarned        float64 `json:"average_earned_per_game"`
+	AverageFunds         float64 `json:"average_funds"`
+	AverageRSEquipment   float64 `json:"average_rs_equipment"`
+	AverageFTEEquipment  float64 `json:"average_fte_equipment"`
+	AverageREEquipment   float64 `json:"average_re_equipment"`
+	AverageSurvivors     float64 `json:"average_survivors"`
+	MaxFunds             float64 `json:"max_funds"`
+	MinFunds             float64 `json:"min_funds"`
+	TotalFullBuyRounds   int64   `json:"total_full_buy_rounds"`  // FTE > 20000
+	TotalEcoRounds       int64   `json:"total_eco_rounds"`       // FTE < 10000
+	TotalForceBuyRounds  int64   `json:"total_force_buy_rounds"` // FTE 10000-20000
+	MaxConsecutiveLosses int     `json:"max_consecutive_losses"`
+}
+
 // RoundStats contains round distribution statistics
 type RoundStats struct {
 	Min          int           `json:"min"`
@@ -95,7 +116,6 @@ type RoundStats struct {
 	Distribution map[int]int64 `json:"distribution"`
 }
 
-// SimulationConfig unified configuration for all simulation types
 type SimulationConfig struct {
 	NumSimulations        int              `json:"num_simulations"`
 	MaxConcurrent         int              `json:"max_concurrent,omitempty"` // Only for concurrent
@@ -106,25 +126,9 @@ type SimulationConfig struct {
 	Team2Strategy         string           `json:"team2_strategy"`
 	GameRules             engine.GameRules `json:"game_rules"`
 	ExportDetailedResults bool             `json:"export_detailed_results"`
+	ExportRounds          bool             `json:"export_rounds"`
 	Sequential            bool             `json:"sequential"`
 	Exportpath            string           `json:"export_path,omitempty"` // Path for exporting results
-}
-
-// Validate validates the simulation configuration
-func (c *SimulationConfig) Validate() error {
-	if c.NumSimulations <= 0 {
-		return fmt.Errorf("number of simulations must be positive")
-	}
-	if !c.Sequential && c.MaxConcurrent <= 0 {
-		c.MaxConcurrent = runtime.NumCPU()
-	}
-	if c.Team1Strategy == "" {
-		c.Team1Strategy = "all_in"
-	}
-	if c.Team2Strategy == "" {
-		c.Team2Strategy = "default_half"
-	}
-	return nil
 }
 
 // NewStats creates a new SimulationStats instance

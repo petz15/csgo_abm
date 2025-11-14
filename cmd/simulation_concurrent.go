@@ -38,7 +38,7 @@ type WorkerPool struct {
 // SimulationJob represents a single simulation job
 type SimulationJob struct {
 	SimID  int
-	Config analysis.SimulationConfig
+	Config SimulationConfig
 }
 
 // NewWorkerPool creates a new worker pool
@@ -138,6 +138,7 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 			job.Config.GameRules,
 			simPrefix,
 			job.Config.ExportDetailedResults,
+			false,
 			job.Config.Exportpath,
 		)
 
@@ -180,7 +181,7 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 }
 
 // RunParallelSimulations orchestrates the execution of multiple simulations
-func RunParallelSimulations(config analysis.SimulationConfig) error {
+func RunParallelSimulations(config SimulationConfig) error {
 	startTime := time.Now()
 
 	// Initialize statistics

@@ -46,6 +46,70 @@ func (s *SimulationStats) UpdateFailedSimulation() {
 	s.FailedSims++
 }
 
+// UpdateEconomicStats updates economic statistics from a game result
+func (s *SimulationStats) UpdateEconomicStats(team1Econ, team2Econ TeamGameEconomics, totalRounds int) {
+	// Update Team1 economic stats
+	s.Team1EconomicStats.TotalSpent += team1Econ.TotalSpent
+	s.Team1EconomicStats.TotalEarned += team1Econ.TotalEarned
+	s.Team1EconomicStats.AverageFunds += team1Econ.AverageFunds
+	s.Team1EconomicStats.AverageRSEquipment += team1Econ.AverageRSEq
+	s.Team1EconomicStats.AverageFTEEquipment += team1Econ.AverageFTEEq
+	s.Team1EconomicStats.AverageREEquipment += team1Econ.AverageREEq
+	s.Team1EconomicStats.AverageSurvivors += team1Econ.AverageSurvivors
+	s.Team1EconomicStats.TotalFullBuyRounds += int64(team1Econ.FullBuyRounds)
+	s.Team1EconomicStats.TotalEcoRounds += int64(team1Econ.EcoRounds)
+	s.Team1EconomicStats.TotalForceBuyRounds += int64(team1Econ.ForceBuyRounds)
+
+	if team1Econ.MaxFunds > s.Team1EconomicStats.MaxFunds {
+		s.Team1EconomicStats.MaxFunds = team1Econ.MaxFunds
+	}
+	if s.Team1EconomicStats.MinFunds == 0 || team1Econ.MinFunds < s.Team1EconomicStats.MinFunds {
+		s.Team1EconomicStats.MinFunds = team1Econ.MinFunds
+	}
+	if team1Econ.MaxConsecLosses > s.Team1EconomicStats.MaxConsecutiveLosses {
+		s.Team1EconomicStats.MaxConsecutiveLosses = team1Econ.MaxConsecLosses
+	}
+
+	// Update Team2 economic stats
+	s.Team2EconomicStats.TotalSpent += team2Econ.TotalSpent
+	s.Team2EconomicStats.TotalEarned += team2Econ.TotalEarned
+	s.Team2EconomicStats.AverageFunds += team2Econ.AverageFunds
+	s.Team2EconomicStats.AverageRSEquipment += team2Econ.AverageRSEq
+	s.Team2EconomicStats.AverageFTEEquipment += team2Econ.AverageFTEEq
+	s.Team2EconomicStats.AverageREEquipment += team2Econ.AverageREEq
+	s.Team2EconomicStats.AverageSurvivors += team2Econ.AverageSurvivors
+	s.Team2EconomicStats.TotalFullBuyRounds += int64(team2Econ.FullBuyRounds)
+	s.Team2EconomicStats.TotalEcoRounds += int64(team2Econ.EcoRounds)
+	s.Team2EconomicStats.TotalForceBuyRounds += int64(team2Econ.ForceBuyRounds)
+
+	if team2Econ.MaxFunds > s.Team2EconomicStats.MaxFunds {
+		s.Team2EconomicStats.MaxFunds = team2Econ.MaxFunds
+	}
+	if s.Team2EconomicStats.MinFunds == 0 || team2Econ.MinFunds < s.Team2EconomicStats.MinFunds {
+		s.Team2EconomicStats.MinFunds = team2Econ.MinFunds
+	}
+	if team2Econ.MaxConsecLosses > s.Team2EconomicStats.MaxConsecutiveLosses {
+		s.Team2EconomicStats.MaxConsecutiveLosses = team2Econ.MaxConsecLosses
+	}
+}
+
+// TeamGameEconomics holds economic statistics for a single game
+type TeamGameEconomics struct {
+	TotalSpent       float64
+	TotalEarned      float64
+	AverageFunds     float64
+	AverageRSEq      float64
+	AverageFTEEq     float64
+	AverageREEq      float64
+	AverageSurvivors float64
+	MaxFunds         float64
+	MinFunds         float64
+	FullBuyRounds    int
+	EcoRounds        int
+	ForceBuyRounds   int
+	MaxConsecLosses  int
+}
+
 // CalculateFinalStats computes all derived statistics
 func (s *SimulationStats) CalculateFinalStats() {
 	if s.CompletedSims > 0 {
@@ -57,6 +121,29 @@ func (s *SimulationStats) CalculateFinalStats() {
 		if s.ExecutionTime > 0 {
 			s.ProcessingRate = float64(s.CompletedSims) / s.ExecutionTime.Seconds()
 		}
+
+		// Calculate economic averages
+		gamesFloat := float64(s.CompletedSims)
+
+		// Team 1 economic averages
+		s.Team1EconomicStats.AverageSpent = s.Team1EconomicStats.TotalSpent / gamesFloat
+		s.Team1EconomicStats.AverageSpentPerRound = s.Team1EconomicStats.TotalSpent / float64(s.TotalRounds)
+		s.Team1EconomicStats.AverageEarned = s.Team1EconomicStats.TotalEarned / gamesFloat
+		s.Team1EconomicStats.AverageFunds = s.Team1EconomicStats.AverageFunds / gamesFloat
+		s.Team1EconomicStats.AverageRSEquipment = s.Team1EconomicStats.AverageRSEquipment / gamesFloat
+		s.Team1EconomicStats.AverageFTEEquipment = s.Team1EconomicStats.AverageFTEEquipment / gamesFloat
+		s.Team1EconomicStats.AverageREEquipment = s.Team1EconomicStats.AverageREEquipment / gamesFloat
+		s.Team1EconomicStats.AverageSurvivors = s.Team1EconomicStats.AverageSurvivors / gamesFloat
+
+		// Team 2 economic averages
+		s.Team2EconomicStats.AverageSpent = s.Team2EconomicStats.TotalSpent / gamesFloat
+		s.Team2EconomicStats.AverageSpentPerRound = s.Team2EconomicStats.TotalSpent / float64(s.TotalRounds)
+		s.Team2EconomicStats.AverageEarned = s.Team2EconomicStats.TotalEarned / gamesFloat
+		s.Team2EconomicStats.AverageFunds = s.Team2EconomicStats.AverageFunds / gamesFloat
+		s.Team2EconomicStats.AverageRSEquipment = s.Team2EconomicStats.AverageRSEquipment / gamesFloat
+		s.Team2EconomicStats.AverageFTEEquipment = s.Team2EconomicStats.AverageFTEEquipment / gamesFloat
+		s.Team2EconomicStats.AverageREEquipment = s.Team2EconomicStats.AverageREEquipment / gamesFloat
+		s.Team2EconomicStats.AverageSurvivors = s.Team2EconomicStats.AverageSurvivors / gamesFloat
 	}
 
 	// Calculate advanced statistics

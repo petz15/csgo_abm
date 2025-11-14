@@ -1,7 +1,7 @@
 package main
 
 import (
-	"csgo_abm/internal/analysis"
+	"csgo_abm/internal/engine"
 	"fmt"
 	"math"
 	"os"
@@ -22,7 +22,7 @@ import (
 
 func main() {
 	// Default configuration using unified analysis package
-	config := analysis.SimulationConfig{
+	config := SimulationConfig{
 		NumSimulations:        1,                                               // Default to single simulation
 		MaxConcurrent:         int(math.Max(1, float64(runtime.NumCPU())*0.8)), // Use 80% of available CPU cores
 		MemoryLimit:           3000,                                            // Maximum memory usage before GC (MB)
@@ -32,6 +32,7 @@ func main() {
 		Team2Strategy:         "default_half",
 		Sequential:            false, // Default to parallel simulations
 		ExportDetailedResults: false, // Default to not export individual results
+		ExportRounds:          false, // Default to not export round-by-round data
 		Exportpath:            "",    // Will be set after parsing args
 	}
 
@@ -51,6 +52,8 @@ func main() {
 			config.Sequential = true
 		case "-e", "--export":
 			config.ExportDetailedResults = true
+		case "-r", "--rounds":
+			config.ExportRounds = true
 		case "-c", "--cores":
 			if i+1 < len(args) {
 				fmt.Sscanf(args[i+1], "%d", &config.MaxConcurrent)
@@ -132,6 +135,7 @@ func main() {
 			customConfig.GameRules,
 			"",
 			config.ExportDetailedResults,
+			config.ExportRounds,
 			config.Exportpath,
 		)
 		if err != nil {
@@ -169,6 +173,7 @@ func printUsage() {
 	fmt.Println("  -m, --memory <number>  Memory limit in MB before forcing GC (default: 3000)")
 	fmt.Println("  -s, --sequential       Run simulations sequentially instead of in parallel")
 	fmt.Println("  -e, --export           Export individual game results as JSON files (works with both modes)")
+	fmt.Println("  -r, --rounds           Export round-by-round data for each game (single simulation only)")
 	fmt.Println("  -o, --output <path>    Results output directory (default: results_YYYYMMDD_HHMMSS)")
 	fmt.Println("  -g, --gamerules <file> Path to JSON file with custom game rules (default: built-in defaults)")
 	fmt.Println("  -a, --abmmodels <file> Path to ABM models JSON file (default: abm_models.json)")
@@ -225,4 +230,37 @@ func printUsage() {
 	fmt.Println("  - Avoid -e flag for very large runs (>10K) to prevent filesystem issues")
 	fmt.Println("  - Monitor system resources during long-running simulations")
 	fmt.Println("  - Results are processed directly in memory for optimal performance")
+}
+
+// SimulationConfig unified configuration for all simulation types
+type SimulationConfig struct {
+	NumSimulations        int              `json:"num_simulations"`
+	MaxConcurrent         int              `json:"max_concurrent,omitempty"` // Only for concurrent
+	MemoryLimit           int              `json:"memory_limit,omitempty"`   // Only for concurrent
+	Team1Name             string           `json:"team1_name"`
+	Team1Strategy         string           `json:"team1_strategy"`
+	Team2Name             string           `json:"team2_name"`
+	Team2Strategy         string           `json:"team2_strategy"`
+	GameRules             engine.GameRules `json:"game_rules"`
+	ExportDetailedResults bool             `json:"export_detailed_results"`
+	ExportRounds          bool             `json:"export_rounds"`
+	Sequential            bool             `json:"sequential"`
+	Exportpath            string           `json:"export_path,omitempty"` // Path for exporting results
+}
+
+// Validate validates the simulation configuration
+func (c *SimulationConfig) Validate() error {
+	if c.NumSimulations <= 0 {
+		return fmt.Errorf("number of simulations must be positive")
+	}
+	if !c.Sequential && c.MaxConcurrent <= 0 {
+		c.MaxConcurrent = runtime.NumCPU()
+	}
+	if c.Team1Strategy == "" {
+		c.Team1Strategy = "all_in"
+	}
+	if c.Team2Strategy == "" {
+		c.Team2Strategy = "default_half"
+	}
+	return nil
 }

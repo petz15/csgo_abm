@@ -14,8 +14,10 @@ type Round struct {
 
 func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules, ot bool) *Round {
 
-	T1.NewRound()
-	T2.NewRound()
+	if roundNumber != 1 { //avoid calling NewRound on first round twice
+		T1.NewRound(gamerules.DefaultEquipment)
+		T2.NewRound(gamerules.DefaultEquipment)
+	}
 
 	return &Round{
 		RoundNumber: roundNumber,
@@ -35,8 +37,8 @@ func (r *Round) BuyPhase(Team1 *Team, Team2 *Team) {
 }
 
 func (r *Round) RoundStart(Team1 *Team, Team2 *Team) {
-	// Simulate the round using the comprehensive DetermineRoundOutcome function
-	r.determineRoundOutcome(Team1, Team2)
+	// Simulate the round using the comprehensive CalculateRoundOutcome function
+	r.CalculateRoundOutcome(Team1, Team2)
 
 }
 
@@ -77,15 +79,20 @@ func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
 	if r.is_T1_CT {
 		ctteam = Team1
 		tteam = Team2
-		//while we're here, set RE EQ values i.e. saved equipment values
-		Team1.SetREEqValue(sumArray(r.Calc_Outcome.CTEquipmentPerPlayer))
-		Team2.SetREEqValue(sumArray(r.Calc_Outcome.TEquipmentPerPlayer))
+		//while we're here, set RE EQ values i.e. saved equipment values and survivors
+		Team1.SetREEqValue(math.Floor(sumArray(r.Calc_Outcome.CTEquipmentPerPlayer))) // rounding down to make numbers cleaner
+		Team2.SetREEqValue(math.Floor(sumArray(r.Calc_Outcome.TEquipmentPerPlayer)))
+		Team1.SetSurvivors(r.Calc_Outcome.CTSurvivors)
+		Team2.SetSurvivors(r.Calc_Outcome.TSurvivors)
+
 	} else {
 		ctteam = Team2
 		tteam = Team1
 		//while we're here, set RE EQ values i.e. saved equipment values
-		Team1.SetREEqValue(sumArray(r.Calc_Outcome.TEquipmentPerPlayer))
-		Team2.SetREEqValue(sumArray(r.Calc_Outcome.CTEquipmentPerPlayer))
+		Team1.SetREEqValue(math.Floor(sumArray(r.Calc_Outcome.TEquipmentPerPlayer)))
+		Team2.SetREEqValue(math.Floor(sumArray(r.Calc_Outcome.CTEquipmentPerPlayer)))
+		Team1.SetSurvivors(r.Calc_Outcome.TSurvivors)
+		Team2.SetSurvivors(r.Calc_Outcome.CTSurvivors)
 	}
 
 	var lossbonus int
@@ -96,7 +103,7 @@ func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
 		lossbonus = r.LossBonusCalculation(ctteam)
 	}
 
-	if r.gameRules.LossBonusCalc == true {
+	if r.gameRules.LossBonusCalc {
 		if r.Calc_Outcome.CTWins {
 			tteam.SetCurrentLossBonusLevel(tteam.GetCurrentLossBonusLevel() + 1)
 			ctteam.SetCurrentLossBonusLevel(ctteam.GetCurrentLossBonusLevel() - 1)
@@ -117,8 +124,8 @@ func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
 	// Kills and loss bonus
 
 	if r.Calc_Outcome.CTWins {
-		loserFunds += (5 - float64(r.Calc_Outcome.CTSurvivors)) * 300
-		winnerFunds += (5 - float64(r.Calc_Outcome.TSurvivors)) * 300
+		loserFunds += float64((5 - (r.Calc_Outcome.CTSurvivors)) * 300)
+		winnerFunds += float64((5 - (r.Calc_Outcome.TSurvivors)) * 300)
 
 		// Add loss bonus to losing team
 		// Reduction for surviving T players if round end reason is 4
@@ -128,8 +135,8 @@ func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
 		}
 		loserFunds += float64(lossbonus) * float64(5-reduction)
 	} else {
-		loserFunds += (5 - float64(r.Calc_Outcome.TSurvivors)) * 300
-		winnerFunds += (5 - float64(r.Calc_Outcome.CTSurvivors)) * 300
+		loserFunds += float64((5 - (r.Calc_Outcome.TSurvivors)) * 300)
+		winnerFunds += float64((5 - (r.Calc_Outcome.CTSurvivors)) * 300)
 
 		// Add loss bonus to losing team
 		loserFunds += float64(lossbonus) * 5
@@ -173,30 +180,41 @@ func (r *Round) LossBonusCalculation(loserteam *Team) int {
 	return lossBonus
 }
 
-// determineRoundOutcome uses the comprehensive ABM-based probability function
+// CalculateRoundOutcome uses the comprehensive ABM-based probability function
 // to determine all aspects of the round outcome in one call
-func (r *Round) determineRoundOutcome(Team1 *Team, Team2 *Team) {
+func (r *Round) CalculateRoundOutcome(Team1 *Team, Team2 *Team) {
 	// Get equipment values for CSF calculation
 
-	ctequipment := 0.0
-	tequipment := 0.0
+	//ensure that equipment values are at least 1.0 to avoid zero multipliers
+	ctequipment := 1.0
+	tequipment := 1.0
 
 	if r.is_T1_CT {
-		ctequipment = Team1.RoundData[r.RoundNumber-1].FTE_Eq_value
-		tequipment = Team2.RoundData[r.RoundNumber-1].FTE_Eq_value
+		ctequipment += Team1.RoundData[r.RoundNumber-1].FTE_Eq_value
+		tequipment += Team2.RoundData[r.RoundNumber-1].FTE_Eq_value
 	} else {
-		ctequipment = Team2.RoundData[r.RoundNumber-1].FTE_Eq_value
-		tequipment = Team1.RoundData[r.RoundNumber-1].FTE_Eq_value
+		ctequipment += Team2.RoundData[r.RoundNumber-1].FTE_Eq_value
+		tequipment += Team1.RoundData[r.RoundNumber-1].FTE_Eq_value
 	}
 
 	// Get comprehensive round outcome from ABM distributions (uses CT win probability)
-	outcome := DetermineRoundOutcome(ctequipment, tequipment)
+	r.Calc_Outcome = DetermineRoundOutcome(ctequipment, tequipment)
 
 	// Determine which team won
-	r.is_T1_WinnerTeam = !outcome.CTWins
+	r.is_T1_WinnerTeam = !r.Calc_Outcome.CTWins
 	if r.is_T1_CT {
 		// If Team1 is CT, they win when CT wins
-		r.is_T1_WinnerTeam = outcome.CTWins
+		r.is_T1_WinnerTeam = r.Calc_Outcome.CTWins
 	}
 
+}
+
+// IsT1CT returns whether Team1 is playing as CT
+func (r *Round) IsT1CT() bool {
+	return r.is_T1_CT
+}
+
+// IsT1Winner returns whether Team1 won this round
+func (r *Round) IsT1Winner() bool {
+	return r.is_T1_WinnerTeam
 }
