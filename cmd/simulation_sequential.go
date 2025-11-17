@@ -34,9 +34,6 @@ func updateglobalstats(stats *analysis.SimulationStats, result *GameResult) {
 		AverageSurvivors: result.Team1Economics.AverageSurvivors,
 		MaxFunds:         result.Team1Economics.MaxFunds,
 		MinFunds:         result.Team1Economics.MinFunds,
-		FullBuyRounds:    result.Team1Economics.FullBuyRounds,
-		EcoRounds:        result.Team1Economics.EcoRounds,
-		ForceBuyRounds:   result.Team1Economics.ForceBuyRounds,
 		MaxConsecLosses:  result.Team1Economics.MaxConsecLosses,
 	}
 	team2Econ := analysis.TeamGameEconomics{
@@ -49,9 +46,6 @@ func updateglobalstats(stats *analysis.SimulationStats, result *GameResult) {
 		AverageSurvivors: result.Team2Economics.AverageSurvivors,
 		MaxFunds:         result.Team2Economics.MaxFunds,
 		MinFunds:         result.Team2Economics.MinFunds,
-		FullBuyRounds:    result.Team2Economics.FullBuyRounds,
-		EcoRounds:        result.Team2Economics.EcoRounds,
-		ForceBuyRounds:   result.Team2Economics.ForceBuyRounds,
 		MaxConsecLosses:  result.Team2Economics.MaxConsecLosses,
 	}
 	stats.UpdateEconomicStats(team1Econ, team2Econ, result.TotalRounds)

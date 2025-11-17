@@ -24,16 +24,13 @@ type GameResult struct {
 type TeamGameEconomics struct {
 	TotalSpent       float64
 	TotalEarned      float64
-	AverageFunds     float64
+	AverageFunds     float64 // Average funds at round start
 	AverageRSEq      float64
 	AverageFTEEq     float64
 	AverageREEq      float64
 	AverageSurvivors float64
 	MaxFunds         float64
 	MinFunds         float64
-	FullBuyRounds    int
-	EcoRounds        int
-	ForceBuyRounds   int
 	MaxConsecLosses  int
 }
 
@@ -137,9 +134,6 @@ func calculateTeamEconomics(team *engine.Team, totalRounds int) TeamGameEconomic
 	var totalSurvivors int
 	maxFunds := 0.0
 	minFunds := team.RoundData[0].Funds
-	fullBuyRounds := 0
-	ecoRounds := 0
-	forceBuyRounds := 0
 	maxConsecLosses := 0
 	currentConsecLosses := 0
 
@@ -157,15 +151,6 @@ func calculateTeamEconomics(team *engine.Team, totalRounds int) TeamGameEconomic
 		}
 		if rd.Funds < minFunds {
 			minFunds = rd.Funds
-		}
-
-		// Categorize buy types based on FTE equipment value
-		if rd.FTE_Eq_value > 20000 {
-			fullBuyRounds++
-		} else if rd.FTE_Eq_value < 10000 {
-			ecoRounds++
-		} else {
-			forceBuyRounds++
 		}
 
 		// Track consecutive losses
@@ -191,9 +176,6 @@ func calculateTeamEconomics(team *engine.Team, totalRounds int) TeamGameEconomic
 		AverageSurvivors: float64(totalSurvivors) / roundCount,
 		MaxFunds:         maxFunds,
 		MinFunds:         minFunds,
-		FullBuyRounds:    fullBuyRounds,
-		EcoRounds:        ecoRounds,
-		ForceBuyRounds:   forceBuyRounds,
 		MaxConsecLosses:  maxConsecLosses,
 	}
 }
