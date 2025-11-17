@@ -54,6 +54,8 @@ func main() {
 			config.ExportDetailedResults = true
 		case "-r", "--rounds":
 			config.ExportRounds = true
+		case "-a", "--advanced":
+			config.AdvancedAnalysis = true
 		case "-c", "--cores":
 			if i+1 < len(args) {
 				fmt.Sscanf(args[i+1], "%d", &config.MaxConcurrent)
@@ -84,7 +86,7 @@ func main() {
 				customGameRulesPath = args[i+1]
 				i++
 			}
-		case "-a", "--abmmodels":
+		case "-dist", "--abmmodels":
 			if i+1 < len(args) {
 				customABMModelsPath = args[i+1]
 				i++
@@ -174,9 +176,10 @@ func printUsage() {
 	fmt.Println("  -s, --sequential       Run simulations sequentially instead of in parallel")
 	fmt.Println("  -e, --export           Export individual game results as JSON files (works with both modes)")
 	fmt.Println("  -r, --rounds           Export round-by-round data for each game (single simulation only)")
+	fmt.Println("  -a, --advanced         Enable advanced economic analysis with graphs (works with multiple simulations)")
 	fmt.Println("  -o, --output <path>    Results output directory (default: results_YYYYMMDD_HHMMSS)")
 	fmt.Println("  -g, --gamerules <file> Path to JSON file with custom game rules (default: built-in defaults)")
-	fmt.Println("  -a, --abmmodels <file> Path to ABM models JSON file (default: abm_models.json)")
+	fmt.Println("  -dist, --abmmodels <file> Path to ABM models JSON file (default: abm_models.json)")
 	fmt.Println("  -t1, --team1 <strategy> Team 1 strategy (default: all_in)")
 	fmt.Println("  -t2, --team2 <strategy> Team 2 strategy (default: default_half)")
 	fmt.Println("  -h, --help             Print this help message")
@@ -217,6 +220,8 @@ func printUsage() {
 	fmt.Println("  go run ./cmd -n 100000 -c 4 -m 1000")
 	fmt.Println("  # Run 1,000,000 simulations (use lower concurrent workers for stability)")
 	fmt.Println("  go run ./cmd -n 1000000 -c 2 -m 2000")
+	fmt.Println("  # Run with advanced economic analysis and graphs")
+	fmt.Println("  go run ./cmd -n 1000 -a")
 	fmt.Println("\nResult Export Options:")
 	fmt.Println("  # Export individual results in parallel mode")
 	fmt.Println("  go run ./cmd -n 100 -e")
@@ -245,6 +250,7 @@ type SimulationConfig struct {
 	ExportDetailedResults bool             `json:"export_detailed_results"`
 	ExportRounds          bool             `json:"export_rounds"`
 	Sequential            bool             `json:"sequential"`
+	AdvancedAnalysis      bool             `json:"advanced_analysis"`     // Enable advanced economic analysis
 	Exportpath            string           `json:"export_path,omitempty"` // Path for exporting results
 }
 

@@ -204,7 +204,7 @@ func (s *SimulationStats) calculateRoundStats() {
 	if len(rounds) > 0 {
 		sort.Ints(rounds)
 		s.AdvancedStats.MedianRounds = calculateMedian(rounds)
-		s.AdvancedStats.StdDevRounds = calculateStdDev(rounds)
+		s.AdvancedStats.StdDevRounds = calculateStdDevInt(rounds)
 	}
 }
 
@@ -250,7 +250,7 @@ func calculateMedian(sorted []int) float64 {
 	return float64(sorted[n/2])
 }
 
-func calculateStdDev(values []int) float64 {
+func calculateStdDevInt(values []int) float64 {
 	if len(values) == 0 {
 		return 0
 	}

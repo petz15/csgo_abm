@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"csgo_abm/internal/analysis"
+	"csgo_abm/internal/engine"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,6 +24,7 @@ type SimulationResult struct {
 	WentToOvertime bool
 	Team1Economics TeamGameEconomics
 	Team2Economics TeamGameEconomics
+	GameData       *engine.Game // Optional: for advanced analysis
 	Error          error
 }
 
@@ -160,6 +162,7 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 				WentToOvertime: gameResult.WentToOvertime,
 				Team1Economics: gameResult.Team1Economics,
 				Team2Economics: gameResult.Team2Economics,
+				GameData:       gameResult.GameData, // Pass game data for advanced analysis
 				Error:          nil,
 			}
 		}
@@ -201,6 +204,13 @@ func RunParallelSimulations(config SimulationConfig) error {
 		Exportpath:            config.Exportpath, // Use the export path from main config
 	})
 
+	// Initialize advanced analyzer if enabled
+	var advancedAnalyzer *analysis.AdvancedAnalyzer
+	if config.AdvancedAnalysis {
+		advancedAnalyzer = analysis.NewAdvancedAnalyzer()
+		fmt.Println("📊 Advanced economic analysis: ENABLED")
+	}
+
 	fmt.Printf("Starting %d simulations with %d concurrent workers...\n",
 		config.NumSimulations, config.MaxConcurrent)
 	fmt.Printf("Memory limit: %d MB\n", config.MemoryLimit)
@@ -226,7 +236,7 @@ func RunParallelSimulations(config SimulationConfig) error {
 	resultsDone := make(chan bool)
 	go func() {
 		defer close(resultsDone)
-		collectResults(pool.results, stats, config.NumSimulations)
+		collectResults(pool.results, stats, config.NumSimulations, advancedAnalyzer)
 	}()
 
 	// Track memory usage
@@ -321,6 +331,23 @@ func RunParallelSimulations(config SimulationConfig) error {
 		fmt.Printf("Warning: Failed to export summary: %v\n", err)
 	}
 
+	// Finalize and export advanced analysis if enabled
+	if advancedAnalyzer != nil {
+		fmt.Println("\n📊 Finalizing advanced economic analysis...")
+		advancedAnalysis := advancedAnalyzer.Finalize()
+
+		// Export graphs and analysis
+		exporter := analysis.NewGraphExporter(advancedAnalysis, config.Exportpath)
+		if err := exporter.ExportAll(); err != nil {
+			fmt.Printf("Warning: Failed to export advanced analysis: %v\n", err)
+		} else {
+			fmt.Println("✅ Advanced analysis exported successfully")
+		}
+
+		// Print summary
+		analysis.PrintAnalysisSummary(advancedAnalysis)
+	}
+
 	// Print final results
 	analysis.PrintEnhancedStats(stats)
 
@@ -333,7 +360,7 @@ func RunParallelSimulations(config SimulationConfig) error {
 
 	return nil
 } // collectResults processes simulation results and updates statistics
-func collectResults(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int) {
+func collectResults(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int, advancedAnalyzer *analysis.AdvancedAnalyzer) {
 	processedCount := int64(0)
 
 	for result := range results {
@@ -382,6 +409,15 @@ func collectResults(results <-chan SimulationResult, stats *analysis.SimulationS
 			MaxConsecLosses:  result.Team2Economics.MaxConsecLosses,
 		}
 		stats.UpdateEconomicStats(team1Econ, team2Econ, result.TotalRounds)
+
+		// Process game for advanced analysis if enabled
+		if advancedAnalyzer != nil && result.GameData != nil {
+			advancedAnalyzer.ProcessGame(result.GameData)
+
+			// Cleanup game data after processing
+			result.GameData.Cleanup()
+			result.GameData = nil
+		}
 	}
 }
 

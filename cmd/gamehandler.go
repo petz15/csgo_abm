@@ -18,6 +18,7 @@ type GameResult struct {
 	WentToOvertime bool
 	Team1Economics TeamGameEconomics
 	Team2Economics TeamGameEconomics
+	GameData       *engine.Game // Optional: full game data for advanced analysis
 }
 
 // TeamGameEconomics holds economic statistics for a single game
@@ -63,6 +64,7 @@ func StartGame_default(team1Name string, team1Strategy string, team2Name string,
 		WentToOvertime: game.OT,
 		Team1Economics: team1Econ,
 		Team2Economics: team2Econ,
+		GameData:       game, // Store game for advanced analysis
 	}
 
 	// Optionally export to JSON for debugging/analysis
@@ -112,14 +114,18 @@ func StartGame_default(team1Name string, team1Strategy string, team2Name string,
 		}
 	}
 
-	// Cleanup game data to free memory
-	game.Cleanup()
+	// Don't cleanup game yet if it might be used for advanced analysis
+	// Caller is responsible for cleanup after using GameData
+	if result.GameData == nil {
+		// Cleanup game data to free memory
+		game.Cleanup()
 
-	// Explicitly clear game data structures to help with garbage collection
-	game.Rounds = nil
-	game.Team1 = nil
-	game.Team2 = nil
-	game = nil
+		// Explicitly clear game data structures to help with garbage collection
+		game.Rounds = nil
+		game.Team1 = nil
+		game.Team2 = nil
+		game = nil
+	}
 
 	return result, nil
 }
