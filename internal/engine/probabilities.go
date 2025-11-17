@@ -1,54 +1,11 @@
 package engine
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
-	"os"
-	"path/filepath"
 	"strconv"
 )
-
-// Distributions represents the complete JSON structure for ABM distributions
-type Distributions struct {
-	Metadata struct {
-		CSFRValue float64 `json:"csf_r_value"`
-		CSFRanges struct {
-			Min int `json:"min"`
-			Max int `json:"max"`
-		} `json:"csf_ranges"`
-	} `json:"metadata"`
-
-	Distributions struct {
-		RoundEndReason map[string]map[string]struct {
-			CumulativeDistribution map[string]struct {
-				Reason                int     `json:"reason"`
-				ReasonName            string  `json:"reason_name"`
-				CumulativeProbability float64 `json:"cumulative_probability"`
-			} `json:"cumulative_distribution"`
-			NRounds int `json:"n_rounds"`
-		} `json:"round_end_reason"`
-
-		BombPlanted struct {
-			T map[string]float64 `json:"T"`
-		} `json:"bomb_planted"`
-
-		Survivors map[string]map[string]struct {
-			ReasonName       string `json:"reason_name"`
-			CSFDistributions map[string]struct {
-				CumulativeLookup map[string]int `json:"cumulative_lookup"`
-			} `json:"csf_distributions"`
-		} `json:"survivors"`
-
-		EquipmentSaved map[string]map[string]struct {
-			ReasonName            string `json:"reason_name"`
-			SurvivorDistributions map[string]struct {
-				ECDFLookup map[string]float64 `json:"ecdf_lookup"`
-			} `json:"survivor_distributions"`
-		} `json:"equipment_saved"`
-	} `json:"distributions"`
-}
 
 // RoundOutcome holds all the results of a round determination
 type RoundOutcome struct {
@@ -77,40 +34,23 @@ type RNG_Outcomes struct {
 }
 
 var (
-	distributions       *Distributions
+	distributions       *ProcessedDistributions
 	distributionsLoaded bool
 )
 
-// LoadDistributions loads the distributions from JSON file.
+// LoadDistributions loads the distributions from JSON file and converts to sorted slices.
 // Must be called once at application startup before any simulations.
 func LoadDistributions(filePath string) error {
 	if distributionsLoaded {
 		return nil
 	}
 
-	if filePath == "" {
-		filePath = "distributions.json"
-	}
-
-	data, err := os.ReadFile(filePath)
+	processed, err := loadAndProcessDistributions(filePath)
 	if err != nil {
-		if filePath == "distributions.json" {
-			parentPath := filepath.Join("..", "distributions.json")
-			data, err = os.ReadFile(parentPath)
-			if err != nil {
-				return fmt.Errorf("failed to read distributions file from '%s' or '%s': %w", filePath, parentPath, err)
-			}
-		} else {
-			return fmt.Errorf("failed to read distributions file '%s': %w", filePath, err)
-		}
+		return err
 	}
 
-	var models Distributions
-	if err := json.Unmarshal(data, &models); err != nil {
-		return fmt.Errorf("failed to unmarshal distributions file: %w", err)
-	}
-
-	distributions = &models
+	distributions = processed
 	distributionsLoaded = true
 
 	return nil
@@ -122,7 +62,7 @@ func IsABMModelsLoaded() bool {
 }
 
 // GetABMModels returns the loaded distributions (for testing/debugging)
-func GetABMModels() *Distributions {
+func GetABMModels() *ProcessedDistributions {
 	return distributions
 }
 
@@ -196,26 +136,22 @@ func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64) RoundOutcome {
 
 // sampleRoundEndReason samples the round end reason from distributions
 func sampleRoundEndReason(side string, oc *RoundOutcome) {
-	sideMap := distributions.Distributions.RoundEndReason[side]
+	sideMap := distributions.RoundEndReason[side]
 	if sideMap == nil {
 		panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: missing round end reason distributions for side='%s'", side))
 	}
 
-	bucket := sideMap[oc.CSFKey]
-	if bucket.CumulativeDistribution == nil || len(bucket.CumulativeDistribution) == 0 {
+	thresholds := sideMap[oc.CSFKey]
+	if len(thresholds) == 0 {
 		panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: missing or empty cumulative distribution for side='%s', csfKey='%s'", side, oc.CSFKey))
 	}
 
 	randValue := rand.Float64() * 100.0
 	oc.StochasticValues.RNG_RoundOutcome = randValue
 
-	for thresholdStr, entry := range bucket.CumulativeDistribution {
-		threshold, err := strconv.ParseFloat(thresholdStr, 64)
-		if err != nil {
-			panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: invalid threshold string '%s' for side='%s', csfKey='%s': %v", thresholdStr, side, oc.CSFKey, err))
-		}
-
-		if randValue <= threshold {
+	// Use pre-sorted slice
+	for _, entry := range thresholds {
+		if randValue <= entry.Threshold {
 			oc.ReasonCode = entry.Reason
 		}
 	}
@@ -234,9 +170,9 @@ func determineBombPlanted(oc *RoundOutcome) {
 		oc.BombPlanted = true
 	case 2:
 		// Sample from bomb planted distribution
-		bombMap := distributions.Distributions.BombPlanted.T
+		bombMap := distributions.BombPlantedT
 		if bombMap == nil {
-			panic(fmt.Sprintf("probabilities.go: determineBombPlanted: missing bomb planted distribution for T side"))
+			panic("probabilities.go: determineBombPlanted: missing bomb planted distribution for T side")
 		}
 		prob, ok := bombMap[oc.CSFKey]
 		if !ok {
@@ -251,19 +187,19 @@ func determineBombPlanted(oc *RoundOutcome) {
 
 // sampleSurvivors samples number of survivors from distributions
 func sampleSurvivors(side string, oc *RoundOutcome) int {
-	sideMap := distributions.Distributions.Survivors[side]
+	sideMap := distributions.Survivors[side]
 	if sideMap == nil {
 		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing survivor distributions for side='%s'", side))
 	}
 
 	reasonData := sideMap[strconv.Itoa(oc.ReasonCode)]
-	if reasonData.CSFDistributions == nil {
+	if reasonData == nil {
 		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing survivor distributions for side='%s', reasonCode='%d'", side, oc.ReasonCode))
 	}
 
-	bucket := reasonData.CSFDistributions[oc.CSFKey]
-	if bucket.CumulativeLookup == nil || len(bucket.CumulativeLookup) == 0 {
-		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing or empty cumulative lookup for side='%s', reasonCode='%s', csfKey='%s'", side, oc.ReasonCode, oc.CSFKey))
+	thresholds := reasonData[oc.CSFKey]
+	if len(thresholds) == 0 {
+		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing or empty cumulative lookup for side='%s', reasonCode='%d', csfKey='%s'", side, oc.ReasonCode, oc.CSFKey))
 	}
 
 	randValue := rand.Float64() * 100.0
@@ -275,14 +211,10 @@ func sampleSurvivors(side string, oc *RoundOutcome) int {
 
 	var survivors int = 0
 
-	for thresholdStr, entry := range bucket.CumulativeLookup {
-		threshold, err := strconv.ParseFloat(thresholdStr, 64)
-		if err != nil {
-			panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: invalid threshold string '%s' for side='%s', csfKey='%s': %v", thresholdStr, side, oc.CSFKey, err))
-		}
-
-		if randValue <= threshold {
-			survivors = entry
+	// Use pre-sorted slice
+	for _, entry := range thresholds {
+		if randValue <= entry.Threshold {
+			survivors = entry.Value
 		}
 	}
 
@@ -304,32 +236,32 @@ func sampleEquipment(side string, oc *RoundOutcome) {
 		return
 	}
 
-	sideMap := distributions.Distributions.EquipmentSaved[side]
+	sideMap := distributions.EquipmentSaved[side]
 	if sideMap == nil {
 		panic(fmt.Sprintf("probabilities.go: sampleEquipment: missing equipment saved distributions for side='%s'", side))
 	}
 
-	var reasonCodeStr string = strconv.Itoa(oc.ReasonCode)
+	reasonCodeStr := strconv.Itoa(oc.ReasonCode)
 	reasonData := sideMap[reasonCodeStr]
-	if reasonData.SurvivorDistributions == nil {
-		panic(fmt.Sprintf("probabilities.go: sampleEquipment: missing equipment saved distributions for side='%s', reasonCode='%s'", side, oc.ReasonCode))
+	if reasonData == nil {
+		panic(fmt.Sprintf("probabilities.go: sampleEquipment: missing equipment saved distributions for side='%s', reasonCode='%d'", side, oc.ReasonCode))
 	}
 
 	survivorKey := strconv.Itoa(survivors)
-	survivorDist := reasonData.SurvivorDistributions[survivorKey]
-	if survivorDist.ECDFLookup == nil || len(survivorDist.ECDFLookup) == 0 {
-		panic(fmt.Sprintf("probabilities.go: sampleEquipment: missing or empty ECDF lookup for side='%s', reasonCode='%s', survivors=%d", side, oc.ReasonCode, survivors))
+	percentiles := reasonData[survivorKey]
+	if len(percentiles) == 0 {
+		panic(fmt.Sprintf("probabilities.go: sampleEquipment: missing or empty ECDF lookup for side='%s', reasonCode='%d', survivors=%d", side, oc.ReasonCode, survivors))
 	}
 
 	saved_eq_pct := 0.0
 	for i := 0; i < survivors; i++ {
 		if side == "CT" {
 			oc.StochasticValues.RNG_EquipmentCT = append(oc.StochasticValues.RNG_EquipmentCT, rand.Float64())
-			saved_eq_pct = sampleFromECDFLookup(survivorDist.ECDFLookup, oc.StochasticValues.RNG_EquipmentCT[i])
+			saved_eq_pct = sampleFromECDFLookup(percentiles, oc.StochasticValues.RNG_EquipmentCT[i])
 			oc.CTEquipmentSharePerPlayer = append(oc.CTEquipmentSharePerPlayer, saved_eq_pct)
 		} else {
 			oc.StochasticValues.RNG_EquipmentT = append(oc.StochasticValues.RNG_EquipmentT, rand.Float64())
-			saved_eq_pct = sampleFromECDFLookup(survivorDist.ECDFLookup, oc.StochasticValues.RNG_EquipmentT[i])
+			saved_eq_pct = sampleFromECDFLookup(percentiles, oc.StochasticValues.RNG_EquipmentT[i])
 			oc.TEquipmentSharePerPlayer = append(oc.TEquipmentSharePerPlayer, saved_eq_pct)
 		}
 	}
@@ -338,25 +270,28 @@ func sampleEquipment(side string, oc *RoundOutcome) {
 
 func determineEquipmentSavedPerPlayer(oc *RoundOutcome, total_equipment float64) {
 
-	if sumArray(oc.CTEquipmentSharePerPlayer)+sumArray(oc.TEquipmentSharePerPlayer) > 1.0 {
+	if sumArray(oc.CTEquipmentSharePerPlayer)+sumArray(oc.TEquipmentSharePerPlayer) > 100.0 {
 		// Normalize shares
 		total_share := sumArray(oc.CTEquipmentSharePerPlayer) + sumArray(oc.TEquipmentSharePerPlayer)
 		for i := range oc.CTEquipmentSharePerPlayer {
-			oc.CTEquipmentSharePerPlayer[i] /= total_share
+			eq_value := oc.CTEquipmentSharePerPlayer[i] / total_share
+			oc.CTEquipmentPerPlayer = append(oc.CTEquipmentPerPlayer, eq_value)
 		}
 		for i := range oc.TEquipmentSharePerPlayer {
-			oc.TEquipmentSharePerPlayer[i] /= total_share
+			eq_value := oc.TEquipmentSharePerPlayer[i] / total_share
+			oc.TEquipmentPerPlayer = append(oc.TEquipmentPerPlayer, eq_value)
 		}
-	}
+	} else {
 
-	for _, share := range oc.CTEquipmentSharePerPlayer {
-		eq_value := share * total_equipment
-		oc.CTEquipmentPerPlayer = append(oc.CTEquipmentPerPlayer, eq_value)
-	}
+		for _, share := range oc.CTEquipmentSharePerPlayer {
+			eq_value := (share / 100) * total_equipment
+			oc.CTEquipmentPerPlayer = append(oc.CTEquipmentPerPlayer, eq_value)
+		}
 
-	for _, share := range oc.TEquipmentSharePerPlayer {
-		eq_value := share * total_equipment
-		oc.TEquipmentPerPlayer = append(oc.TEquipmentPerPlayer, eq_value)
+		for _, share := range oc.TEquipmentSharePerPlayer {
+			eq_value := (share / 100) * total_equipment
+			oc.TEquipmentPerPlayer = append(oc.TEquipmentPerPlayer, eq_value)
+		}
 	}
 
 }
@@ -401,22 +336,18 @@ func oppositeSide(side string) string {
 	return "CT"
 }
 
-// sampleFromECDFLookup samples from an ECDF lookup table
-func sampleFromECDFLookup(lookup map[string]float64, RNG_Eq float64) float64 {
+// sampleFromECDFLookup samples from a pre-sorted ECDF lookup table
+func sampleFromECDFLookup(percentiles []PercentileValue, RNG_Eq float64) float64 {
 	randPercentile := RNG_Eq * 100.0
 	result := 0.0
 
-	for percentileStr, value := range lookup {
-		percentile, err := strconv.ParseFloat(percentileStr, 64)
-		if err != nil {
-			continue
-		}
-		if percentile <= randPercentile {
-			result = value
+	// Use pre-sorted slice
+	for _, entry := range percentiles {
+		if entry.Percentile <= randPercentile {
+			result = entry.Value
 		} else {
 			break
 		}
-
 	}
 
 	return result

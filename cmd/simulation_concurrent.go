@@ -21,6 +21,8 @@ type SimulationResult struct {
 	Team2Score     int
 	TotalRounds    int
 	WentToOvertime bool
+	Team1Economics TeamGameEconomics
+	Team2Economics TeamGameEconomics
 	Error          error
 }
 
@@ -65,8 +67,8 @@ func (wp *WorkerPool) Start() {
 // Stop gracefully shuts down the worker pool
 func (wp *WorkerPool) Stop() {
 	close(wp.jobs)    // Signal workers to stop accepting jobs
-	wp.cancel()       // Cancel context to stop any blocked operations
-	wp.wg.Wait()      // Wait for all workers to finish
+	wp.wg.Wait()      // Wait for all workers to finish their current jobs
+	wp.cancel()       // Cancel context after workers are done
 	close(wp.results) // Close results channel after workers are done
 }
 
@@ -156,6 +158,8 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 				Team2Score:     gameResult.Team2Score,
 				TotalRounds:    gameResult.TotalRounds,
 				WentToOvertime: gameResult.WentToOvertime,
+				Team1Economics: gameResult.Team1Economics,
+				Team2Economics: gameResult.Team2Economics,
 				Error:          nil,
 			}
 		}
@@ -351,6 +355,39 @@ func collectResults(results <-chan SimulationResult, stats *analysis.SimulationS
 			result.WentToOvertime,
 			0, // responseTime - not tracked in current implementation
 		)
+
+		// Update economic statistics
+		team1Econ := analysis.TeamGameEconomics{
+			TotalSpent:       result.Team1Economics.TotalSpent,
+			TotalEarned:      result.Team1Economics.TotalEarned,
+			AverageFunds:     result.Team1Economics.AverageFunds,
+			AverageRSEq:      result.Team1Economics.AverageRSEq,
+			AverageFTEEq:     result.Team1Economics.AverageFTEEq,
+			AverageREEq:      result.Team1Economics.AverageREEq,
+			AverageSurvivors: result.Team1Economics.AverageSurvivors,
+			MaxFunds:         result.Team1Economics.MaxFunds,
+			MinFunds:         result.Team1Economics.MinFunds,
+			FullBuyRounds:    result.Team1Economics.FullBuyRounds,
+			EcoRounds:        result.Team1Economics.EcoRounds,
+			ForceBuyRounds:   result.Team1Economics.ForceBuyRounds,
+			MaxConsecLosses:  result.Team1Economics.MaxConsecLosses,
+		}
+		team2Econ := analysis.TeamGameEconomics{
+			TotalSpent:       result.Team2Economics.TotalSpent,
+			TotalEarned:      result.Team2Economics.TotalEarned,
+			AverageFunds:     result.Team2Economics.AverageFunds,
+			AverageRSEq:      result.Team2Economics.AverageRSEq,
+			AverageFTEEq:     result.Team2Economics.AverageFTEEq,
+			AverageREEq:      result.Team2Economics.AverageREEq,
+			AverageSurvivors: result.Team2Economics.AverageSurvivors,
+			MaxFunds:         result.Team2Economics.MaxFunds,
+			MinFunds:         result.Team2Economics.MinFunds,
+			FullBuyRounds:    result.Team2Economics.FullBuyRounds,
+			EcoRounds:        result.Team2Economics.EcoRounds,
+			ForceBuyRounds:   result.Team2Economics.ForceBuyRounds,
+			MaxConsecLosses:  result.Team2Economics.MaxConsecLosses,
+		}
+		stats.UpdateEconomicStats(team1Econ, team2Econ, result.TotalRounds)
 	}
 }
 

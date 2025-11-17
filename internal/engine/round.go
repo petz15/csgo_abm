@@ -3,13 +3,13 @@ package engine
 import "math"
 
 type Round struct {
-	RoundNumber      int
-	is_T1_CT         bool // true if Team1 is CT, false if Team1 is T
-	Calc_Outcome     RoundOutcome
-	is_T1_WinnerTeam bool //true if Team1 wins, false if Team2 wins
-	Sideswitch       bool // True if sideswitch has occurred
-	gameRules        *GameRules
-	OT               bool // True if this is an overtime round
+	RoundNumber    int
+	IsT1CT         bool `json:"is_t1_ct"` // true if Team1 is CT, false if Team1 is T
+	Calc_Outcome   RoundOutcome
+	IsT1WinnerTeam bool       `json:"is_t1_winner_team"` //true if Team1 wins, false if Team2 wins
+	Sideswitch     bool       // True if sideswitch has occurred
+	gameRules      *GameRules `json:"-"` // Don't export game rules
+	OT             bool       // True if this is an overtime round
 }
 
 func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules, ot bool) *Round {
@@ -21,7 +21,7 @@ func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, 
 
 	return &Round{
 		RoundNumber: roundNumber,
-		is_T1_CT:    ctteam,
+		IsT1CT:      ctteam,
 		Sideswitch:  sidewitch,
 		gameRules:   gamerules,
 		OT:          ot,
@@ -47,8 +47,8 @@ func (r *Round) RoundEnd(Team1 *Team, Team2 *Team) {
 	r.determineFundsEarned(Team1, Team2)
 
 	//update Teams
-	Team1.RoundEnd(r.is_T1_WinnerTeam)
-	Team2.RoundEnd(!r.is_T1_WinnerTeam)
+	Team1.RoundEnd(r.IsT1WinnerTeam)
+	Team2.RoundEnd(!r.IsT1WinnerTeam)
 }
 
 func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
@@ -76,7 +76,7 @@ func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
 
 	var ctteam *Team
 	var tteam *Team
-	if r.is_T1_CT {
+	if r.IsT1CT {
 		ctteam = Team1
 		tteam = Team2
 		//while we're here, set RE EQ values i.e. saved equipment values and survivors
@@ -145,7 +145,7 @@ func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
 	FundsearnedT1 := 0.0
 	FundsearnedT2 := 0.0
 
-	if r.is_T1_WinnerTeam {
+	if r.IsT1WinnerTeam {
 		FundsearnedT1 = winnerFunds
 		FundsearnedT2 = loserFunds
 	} else {
@@ -189,7 +189,7 @@ func (r *Round) CalculateRoundOutcome(Team1 *Team, Team2 *Team) {
 	ctequipment := 1.0
 	tequipment := 1.0
 
-	if r.is_T1_CT {
+	if r.IsT1CT {
 		ctequipment += Team1.RoundData[r.RoundNumber-1].FTE_Eq_value
 		tequipment += Team2.RoundData[r.RoundNumber-1].FTE_Eq_value
 	} else {
@@ -201,20 +201,10 @@ func (r *Round) CalculateRoundOutcome(Team1 *Team, Team2 *Team) {
 	r.Calc_Outcome = DetermineRoundOutcome(ctequipment, tequipment)
 
 	// Determine which team won
-	r.is_T1_WinnerTeam = !r.Calc_Outcome.CTWins
-	if r.is_T1_CT {
+	r.IsT1WinnerTeam = !r.Calc_Outcome.CTWins
+	if r.IsT1CT {
 		// If Team1 is CT, they win when CT wins
-		r.is_T1_WinnerTeam = r.Calc_Outcome.CTWins
+		r.IsT1WinnerTeam = r.Calc_Outcome.CTWins
 	}
 
-}
-
-// IsT1CT returns whether Team1 is playing as CT
-func (r *Round) IsT1CT() bool {
-	return r.is_T1_CT
-}
-
-// IsT1Winner returns whether Team1 won this round
-func (r *Round) IsT1Winner() bool {
-	return r.is_T1_WinnerTeam
 }

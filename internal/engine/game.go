@@ -67,7 +67,7 @@ func (g *Game) Start() {
 
 		g.Rounds = append(g.Rounds, *round)
 
-		g.UpdateScore(round.is_T1_WinnerTeam)
+		g.UpdateScore(round.IsT1WinnerTeam)
 
 		// Clear round pointer to help GC
 		round = nil
@@ -110,17 +110,17 @@ func (g *Game) GameFinished() {
 	if !g.OT {
 		if g.Score[0] >= (g.GameRules.HalfLength+1) && g.Score[1] < (g.GameRules.HalfLength) {
 			g.GameinProgress = false
-			g.Is_T1_Winner = false // Team1 wins
+			g.Is_T1_Winner = true // Team1 wins
 		} else if g.Score[1] >= (g.GameRules.HalfLength+1) && g.Score[0] < (g.GameRules.HalfLength) {
 			g.GameinProgress = false
-			g.Is_T1_Winner = true // Team2 wins
+			g.Is_T1_Winner = false // Team2 wins
 		}
 	} else if ((g.Score[0]-g.GameRules.HalfLength-(g.OTcounter*g.GameRules.OTHalfLength)) >= 1 || (g.Score[1]-g.GameRules.HalfLength-(g.OTcounter*g.GameRules.OTHalfLength)) >= 1) && math.Abs(float64(g.Score[0]-g.Score[1])) >= 2 {
 		g.GameinProgress = false
 		if g.Score[0] > g.Score[1] {
-			g.Is_T1_Winner = false // Team1 wins
+			g.Is_T1_Winner = true // Team1 wins
 		} else {
-			g.Is_T1_Winner = true // Team2 wins
+			g.Is_T1_Winner = false // Team2 wins
 		}
 		//CAUTION WITH THE NEXT PART, THIS DEFINES THE MAXIMUM NUMBER OF ROUNDS IN OVERTIME
 	} else if g.OTcounter > 50 {

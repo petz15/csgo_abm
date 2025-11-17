@@ -116,14 +116,14 @@ func ExportRoundsToJSON(game *engine.Game, path string) error {
 		// Determine sides using helper methods
 		team1Side := "T"
 		team2Side := "CT"
-		if round.IsT1CT() {
+		if round.IsT1CT {
 			team1Side = "CT"
 			team2Side = "T"
 		}
 
 		// Determine winner
 		winner := "Team2"
-		if round.IsT1Winner() {
+		if round.IsT1WinnerTeam {
 			winner = "Team1"
 		}
 
@@ -189,13 +189,13 @@ func ExportRoundsToJSONSimple(game *engine.Game, path string) error {
 
 		// Determine sides
 		team1Side := "T"
-		if round.IsT1CT() {
+		if round.IsT1CT {
 			team1Side = "CT"
 		}
 
 		// Determine winner
 		winner := "Team2"
-		if round.IsT1Winner() {
+		if round.IsT1WinnerTeam {
 			winner = "Team1"
 		}
 

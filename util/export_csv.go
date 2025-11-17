@@ -59,12 +59,12 @@ func ExportRoundsToCSV(game *engine.Game, path string) error {
 		team2Data := game.Team2.RoundData[i]
 
 		team1Side := "T"
-		if round.IsT1CT() {
+		if round.IsT1CT {
 			team1Side = "CT"
 		}
 
 		winner := "Team2"
-		if round.IsT1Winner() {
+		if round.IsT1WinnerTeam {
 			winner = "Team1"
 		}
 
