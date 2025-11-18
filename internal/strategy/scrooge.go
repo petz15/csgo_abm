@@ -1,4 +1,4 @@
-package models
+package strategy
 
 // InvestDecisionMaking_scrooge implements the most conservative strategy possible
 // This strategy hoards money like Scrooge McDuck and refuses to spend on anything

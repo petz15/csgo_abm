@@ -1,4 +1,4 @@
-package models
+package strategy
 
 func InvestDecisionMaking_half(ctx StrategyContext_simple) float64 {
 

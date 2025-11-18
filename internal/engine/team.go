@@ -95,9 +95,9 @@ func (t *Team) Sideswitch(OT bool, startingfunds float64, defaultEquipment float
 
 // for now it is a set of variables, in the future it could be a json file with information
 // the state of the game, team, round etc.
-func (t *Team) BuyPhase(Round int, ot bool, t2 *Team, gameR GameRules) {
+func (t *Team) BuyPhase(Round int, ot bool, t2 *Team, gameR GameRules, g *Game) {
 
-	investment := CallStrategy(t, t2, Round, ot, gameR) // Call the strategy manager to get investment amount
+	investment := CallStrategy(t, t2, Round, ot, gameR, g) // Call the strategy manager to get investment amount
 
 	t.SpendFunds(investment) // Spend investment amount
 
@@ -184,4 +184,12 @@ func (t *Team) Cleanup() {
 func (t *Team) SetSurvivors(survivors int) {
 	RD := &t.RoundData[len(t.RoundData)-1]
 	RD.Survivors = survivors
+}
+
+func (t *Team) GetpreviousSurvivors() int {
+	if len(t.RoundData) < 2 {
+		return 0
+	}
+	RD := &t.RoundData[len(t.RoundData)-2]
+	return RD.Survivors
 }

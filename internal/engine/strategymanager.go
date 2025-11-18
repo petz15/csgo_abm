@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"csgo_abm/internal/models"
+	"csgo_abm/internal/strategy"
 	"math"
 )
 
@@ -9,9 +9,9 @@ type StrategyManager struct {
 	Name string
 }
 
-func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gameR GameRules) float64 {
+func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gameR GameRules, g *Game) float64 {
 	// Implement the logic to call the appropriate strategy for the team
-	ctx := models.StrategyContext_simple{
+	ctx := strategy.StrategyContext_simple{
 		Funds:             team.GetCurrentFunds(),
 		CurrentRound:      curround,
 		OpponentScore:     opponent.GetScore(),
@@ -23,35 +23,42 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		IsPistolRound:     isPistolRound(curround, gameR.HalfLength),
 		IsEcoAfterPistol:  isEcoAfterPistol(curround, gameR.HalfLength, team.GetScore(), opponent.GetScore()),
 		IsLastRoundHalf:   isLastRoundHalf(curround, gameR.HalfLength),
-		RoundImportance:   calculateRoundImportance(team.GetScore(), opponent.GetScore(), curround, gameR.HalfLength),
-		EconomicAdvantage: calculateEconomicAdvantage(team.GetCurrentFunds(), opponent.GetCurrentFunds()),
-		WinProbability:    calculateWinProbability(team.GetCurrentFunds(), opponent.GetCurrentFunds(), team.GetScore(), opponent.GetScore()),
 		HalfLength:        gameR.HalfLength,
 		OTHalfLength:      gameR.OTHalfLength,
+		OwnSurvivors:      team.GetpreviousSurvivors(),
+		EnemySurvivors:    opponent.GetpreviousSurvivors(),
+		RoundEndReason:    g.GetPreviousRoundEndReason(),
+		Is_BombPlanted:    g.GetPreviousBombPlant(),
 	}
 
 	switch team.Strategy {
 	case "all_in":
-		return models.InvestDecisionMaking_allin(ctx)
+		return strategy.InvestDecisionMaking_allin(ctx)
 	case "default_half":
-		return models.InvestDecisionMaking_half(ctx)
+		return strategy.InvestDecisionMaking_half(ctx)
 	case "adaptive_eco_v1":
-		return models.InvestDecisionMaking_adaptive_v1(ctx)
+		return strategy.InvestDecisionMaking_adaptive_v1(ctx)
 	case "adaptive_eco_v2":
-		return models.InvestDecisionMaking_adaptive_v2(ctx)
+		return strategy.InvestDecisionMaking_adaptive_v2(ctx)
 	case "yolo":
-		return models.InvestDecisionMaking_yolo(ctx)
+		return strategy.InvestDecisionMaking_yolo(ctx)
 	case "scrooge":
-		return models.InvestDecisionMaking_scrooge(ctx)
+		return strategy.InvestDecisionMaking_scrooge(ctx)
+	case "smart_v1":
+		return strategy.InvestDecisionMaking_smart_v1(ctx)
+	case "all_in_v2":
+		return strategy.InvestDecisionMaking_allin_v2(ctx)
+	case "ml_v1":
+		return strategy.InvestDecisionMaking_ml_v1(ctx)
 	default:
-		return models.InvestDecisionMaking_allin(ctx)
+		return strategy.InvestDecisionMaking_allin(ctx)
 	}
 }
 
 //most of the following functions are used to enhance the context for decision making
-//which should be done by each model individually. For now, for testing purposes, they are implemented here.
+//which should be done by each strategy individually. For now, for testing purposes, they are implemented here.
 
-//TODO: Clean up these functions and move them to a more appropriate place in the models package i.e. into the individual models
+//TODO: Clean up these functions and move them to a more appropriate place in the strategy package i.e. into the individual strategies
 
 // Helper functions for enhanced context
 func isPistolRound(round int, halfLength int) bool {

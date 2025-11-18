@@ -1,4 +1,4 @@
-package models
+package strategy
 
 // StrategyContext holds all relevant information for economic decision making
 type StrategyContext_simple struct {
@@ -17,8 +17,12 @@ type StrategyContext_simple struct {
 	IsLastRoundHalf   bool
 	IsOvertime        bool
 	IsEcoAfterPistol  bool
-	HalfLength        int // Length of a half in rounds
-	OTHalfLength      int // Length of overtime half in rounds
+	HalfLength        int  // Length of a half in rounds
+	OTHalfLength      int  // Length of overtime half in rounds
+	OwnSurvivors      int  // Number of survivors in the previous RoundEndReason
+	EnemySurvivors    int  // Number of enemy survivors in the previous RoundEndReason
+	RoundEndReason    int  // Reason for the end of the last round
+	Is_BombPlanted    bool // Whether the bomb was planted in the last round
 }
 
 func empty() {

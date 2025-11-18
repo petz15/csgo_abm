@@ -55,9 +55,12 @@ func (g *Game) Start() {
 	g.GameinProgress = true
 
 	for g.GameinProgress {
-		g.GameState()
 
-		round := NewRound(g.Team1, g.Team2, g.CurrentRound, g.is_T1_CT, g.sideswitch, &g.GameRules, g.OT)
+		round := NewRound(g.Team1, g.Team2, g.CurrentRound, g.is_T1_CT, g.sideswitch, &g.GameRules, g.OT, g)
+
+		//TODO: Gamestate should come after new round creation and before buyphase
+		//TODO: needs to be tested that all works as intended
+		g.GameState()
 
 		round.BuyPhase(g.Team1, g.Team2)
 
@@ -149,4 +152,18 @@ func (g *Game) Cleanup() {
 	}
 	// Don't clear Rounds if exporting, but can be cleared after export
 	// g.Rounds = nil
+}
+
+func (g *Game) GetPreviousRoundEndReason() int {
+	if len(g.Rounds) == 0 {
+		return 0 // or some default value indicating no previous round
+	}
+	return g.Rounds[len(g.Rounds)-1].Calc_Outcome.ReasonCode
+}
+
+func (g *Game) GetPreviousBombPlant() bool {
+	if len(g.Rounds) == 0 {
+		return false // or some default value indicating no previous round
+	}
+	return g.Rounds[len(g.Rounds)-1].Calc_Outcome.BombPlanted
 }

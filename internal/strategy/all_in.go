@@ -1,4 +1,4 @@
-package models
+package strategy
 
 func InvestDecisionMaking_allin(ctx StrategyContext_simple) float64 {
 	// Implement your decision-making logic here

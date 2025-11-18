@@ -10,9 +10,10 @@ type Round struct {
 	Sideswitch     bool       // True if sideswitch has occurred
 	gameRules      *GameRules `json:"-"` // Don't export game rules
 	OT             bool       // True if this is an overtime round
+	game           *Game
 }
 
-func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules, ot bool) *Round {
+func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules, ot bool, g *Game) *Round {
 
 	if roundNumber != 1 { //avoid calling NewRound on first round twice
 		T1.NewRound(gamerules.DefaultEquipment)
@@ -25,14 +26,15 @@ func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, 
 		Sideswitch:  sidewitch,
 		gameRules:   gamerules,
 		OT:          ot,
+		game:        g,
 	}
 }
 
 // solution for what information gets passed to the teams, could be a json file in the gamerules which specifies
 // which variables are passed to the teams. No clue how this will be done yet, but it is an idea.
 func (r *Round) BuyPhase(Team1 *Team, Team2 *Team) {
-	Team1.BuyPhase(r.RoundNumber, r.OT, Team2, *r.gameRules) // Call the team's buy phase logic
-	Team2.BuyPhase(r.RoundNumber, r.OT, Team1, *r.gameRules)
+	Team1.BuyPhase(r.RoundNumber, r.OT, Team2, *r.gameRules, r.game) // Call the team's buy phase logic
+	Team2.BuyPhase(r.RoundNumber, r.OT, Team1, *r.gameRules, r.game)
 
 }
 
