@@ -1,9 +1,10 @@
 {
   "defaultEquipment": 200.0,
   "otFunds": 10000.0,
+  "otEquipment": 200.0,
   "startingFunds": 800.0,
   "halfLength": 15,
-  "csfR": 10,
   "otHalfLength": 3,
   "maxFunds": 80000.0,
+  "lossBonusCalc": true
 }

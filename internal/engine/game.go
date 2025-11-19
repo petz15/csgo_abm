@@ -24,12 +24,16 @@ type Game struct {
 	Is_T1_Winner   bool // true if T1 wins, false if T2 wins
 	Team1          *Team
 	Team2          *Team
+	rng            *rand.Rand // Thread-safe RNG for this game instance
 }
 
 // NewGame creates a new game with pre-validated GameRules object (optimized for batch simulations)
 func NewGame(id string, Team1Name string, Team1Strategy string, Team2Name string, Team2Strategy string, gameRules GameRules) *Game {
 
-	currentCT := rand.Intn(2) == 0
+	// Create a thread-safe RNG for this game instance
+	rng := rand.New(rand.NewSource(rand.Int63()))
+
+	currentCT := rng.Intn(2) == 0
 
 	Team_1 := NewTeam(Team1Name, gameRules.StartingFunds, currentCT, gameRules.DefaultEquipment, Team1Strategy)
 	Team_2 := NewTeam(Team2Name, gameRules.StartingFunds, !currentCT, gameRules.DefaultEquipment, Team2Strategy)
@@ -47,8 +51,14 @@ func NewGame(id string, Team1Name string, Team1Strategy string, Team2Name string
 		Score:          [2]int{0, 0},
 		GameRules:      gameRules,
 		GameinProgress: false,
+		rng:            rng,
 	}
 
+}
+
+// SetSeed sets the RNG seed for this game to ensure reproducible outcomes per game/series
+func (g *Game) SetSeed(seed int64) {
+	g.rng = rand.New(rand.NewSource(seed))
 }
 
 func (g *Game) Start() {
@@ -58,8 +68,6 @@ func (g *Game) Start() {
 
 		round := NewRound(g.Team1, g.Team2, g.CurrentRound, g.is_T1_CT, g.sideswitch, &g.GameRules, g.OT, g)
 
-		//TODO: Gamestate should come after new round creation and before buyphase
-		//TODO: needs to be tested that all works as intended
 		g.GameState()
 
 		round.BuyPhase(g.Team1, g.Team2)
@@ -86,16 +94,12 @@ func (g *Game) Start() {
 func (g *Game) GameState() {
 	if g.CurrentRound == g.GameRules.HalfLength+1 {
 		g.switchSide()
-	}
-
-	if g.CurrentRound == (g.GameRules.HalfLength*2)+1 || (g.OT && g.CurrentRound == ((g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength*2)+1)) {
+	} else if g.CurrentRound == (g.GameRules.HalfLength*2)+1 || (g.OT && g.CurrentRound == ((g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength*2)+1)) {
 		g.OT = true
 		g.OTcounter++
 		g.Team1.NewOT(g.GameRules.OTFunds, g.GameRules.OTEquipment)
 		g.Team2.NewOT(g.GameRules.OTFunds, g.GameRules.OTEquipment)
-	}
-
-	if g.OT && g.CurrentRound == (g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength)+1 {
+	} else if g.OT && g.CurrentRound == (g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength)+1 {
 		g.switchSide()
 	}
 
@@ -129,7 +133,7 @@ func (g *Game) GameFinished() {
 	} else if g.OTcounter > 50 {
 		// If the game has gone on for too long, end it
 		g.GameinProgress = false
-		g.Is_T1_Winner = rand.Intn(2) == 0 // Randomly decide a winner
+		g.Is_T1_Winner = g.rng.Intn(2) == 0 // Randomly decide a winner
 	}
 }
 

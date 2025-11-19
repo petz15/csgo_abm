@@ -139,24 +139,24 @@ func calculateTeamEconomics(team *engine.Team, totalRounds int) TeamGameEconomic
 	var totalSpent, totalEarned, totalFunds, totalRSEq, totalFTEEq, totalREEq float64
 	var totalSurvivors int
 	maxFunds := 0.0
-	minFunds := team.RoundData[0].Funds
+	minFunds := team.RoundData[0].Funds_start
 	maxConsecLosses := 0
 	currentConsecLosses := 0
 
 	for _, rd := range team.RoundData {
 		totalSpent += rd.Spent
 		totalEarned += rd.Earned
-		totalFunds += rd.Funds
+		totalFunds += rd.Funds_start
 		totalRSEq += rd.RS_Eq_value
 		totalFTEEq += rd.FTE_Eq_value
 		totalREEq += rd.RE_Eq_value
 		totalSurvivors += rd.Survivors
 
-		if rd.Funds > maxFunds {
-			maxFunds = rd.Funds
+		if rd.Funds_start > maxFunds {
+			maxFunds = rd.Funds_start
 		}
-		if rd.Funds < minFunds {
-			minFunds = rd.Funds
+		if rd.Funds_start < minFunds {
+			minFunds = rd.Funds_start
 		}
 
 		// Track consecutive losses

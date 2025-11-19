@@ -1,0 +1,31 @@
+{
+  "model_type": "decision_tree",
+  "tree": {
+    "is_leaf": true,
+    "value": 1.0
+  },
+  "state_features": [
+    "own_funds",
+    "own_score",
+    "opponent_score",
+    "own_survivors",
+    "opponent_survivors",
+    "consecutive_losses",
+    "is_ct_side",
+    "round_number",
+    "half_length",
+    "last_round_reason",
+    "last_bomb_planted"
+  ],
+  "normalization": {
+    "own_funds": 999999.0,
+    "own_score": 16.0,
+    "opponent_score": 16.0,
+    "own_survivors": 5.0,
+    "opponent_survivors": 5.0,
+    "consecutive_losses": 5.0,
+    "round_number": 30.0,
+    "half_length": 15.0,
+    "last_round_reason": 4.0
+  }
+}

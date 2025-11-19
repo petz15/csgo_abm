@@ -78,7 +78,7 @@ func applyRoundModifiersV2(baseInvestment float64, ctx StrategyContext_simple, e
 	}
 
 	// Anti-eco after pistol win (round 2/17)
-	if ctx.IsEcoAfterPistol && ctx.OwnScore > ctx.OpponentScore {
+	if ctx.IsAfterPistol && ctx.OwnScore > ctx.OpponentScore {
 		// Light buy against likely eco
 		return math.Min(investment*0.7, 2000.0*5)
 	}

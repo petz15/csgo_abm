@@ -22,7 +22,7 @@ type GameState struct {
 	LastBombPlanted   bool
 }
 
-func InvestDecisionMaking_ml_v1(ctx StrategyContext_simple) float64 {
+func InvestDecisionMaking_ml_dqn(ctx StrategyContext_simple) float64 {
 	// Example usage
 	var model *DQNModel
 	var modelErr error
@@ -127,14 +127,6 @@ func LoadModel(metadataPath, weightsPath string) (*DQNModel, error) {
 	// This is simplified - actual implementation would need to parse the layer structure
 
 	return &model, nil
-}
-
-// ReLU activation function
-func relu(x float64) float64 {
-	if x > 0 {
-		return x
-	}
-	return 0
 }
 
 // LayerNorm normalization (simplified)

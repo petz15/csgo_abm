@@ -172,6 +172,20 @@ func CreateResultsDirectory() (string, error) {
 	return dirName, err
 }
 
+// CreateResultsDirectoryAt creates a timestamped results directory under a base path
+func CreateResultsDirectoryAt(base string) (string, error) {
+	if base == "" {
+		return CreateResultsDirectory()
+	}
+	now := time.Now()
+	dirName := fmt.Sprintf("results_%s", now.Format("20060102_150405"))
+	full := filepath.Join(base, dirName)
+	if err := os.MkdirAll(full, 0755); err != nil {
+		return "", err
+	}
+	return full, nil
+}
+
 // ExportAllFormats exports results in multiple formats for comprehensive analysis
 func ExportAllFormats(stats *SimulationStats, baseDir string) error {
 	if err := os.MkdirAll(baseDir, 0755); err != nil {

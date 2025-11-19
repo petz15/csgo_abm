@@ -10,6 +10,7 @@ type Team struct {
 type Team_RoundData struct {
 	is_Side_CT      bool    // true for CT, false for T
 	Funds           float64 // Total funds available for the team at the start of the round
+	Funds_start     float64 // Funds at the start of the round
 	Earned          float64 // Total funds earned by the team at the conclusion of the round
 	RS_Eq_value     float64 // Round start equipment value
 	FTE_Eq_value    float64 // Freeze time end equipment value (after buy phase)
@@ -27,6 +28,7 @@ func NewTeam(name string, startingfunds float64, side bool, defaultequipment flo
 	new_RD := Team_RoundData{
 		is_Side_CT:      side,
 		Funds:           5 * startingfunds, // Starting funds
+		Funds_start:     5 * startingfunds, // Funds at the start of the round
 		Earned:          0,
 		RS_Eq_value:     5 * defaultequipment,
 		FTE_Eq_value:    0,
@@ -52,6 +54,7 @@ func (t *Team) NewRound(defaultequipment float64) {
 	newRoundData := Team_RoundData{
 		is_Side_CT:      previousRound.is_Side_CT,
 		Funds:           previousRound.Funds,
+		Funds_start:     previousRound.Funds,
 		Earned:          0,
 		RS_Eq_value:     previousRound.RE_Eq_value + (float64(5-previousRound.Survivors) * defaultequipment),
 		FTE_Eq_value:    0,
@@ -80,15 +83,16 @@ func (t *Team) RoundEnd(winner bool) {
 func (t *Team) NewOT(OTfunds float64, OTEquipment float64) {
 	t.RoundData[len(t.RoundData)-1].RS_Eq_value = 5 * OTEquipment // Reset equipment for overtime
 	t.RoundData[len(t.RoundData)-1].Funds = 5 * OTfunds           // Reset funds for overtime
+	t.RoundData[len(t.RoundData)-1].Funds_start = 5 * OTfunds
 }
 
 func (t *Team) Sideswitch(OT bool, startingfunds float64, defaultEquipment float64, OTfunds float64, OTEquipment float64) {
-	t.NewRound(defaultEquipment)
 	t.RoundData[len(t.RoundData)-1].is_Side_CT = !t.RoundData[len(t.RoundData)-1].is_Side_CT // Switch side if needed
 	if OT {
 		t.NewOT(OTfunds, OTEquipment)
 	} else {
-		t.RoundData[len(t.RoundData)-1].Funds = 5 * startingfunds          // Reset funds for new half
+		t.RoundData[len(t.RoundData)-1].Funds = 5 * startingfunds // Reset funds for new half
+		t.RoundData[len(t.RoundData)-1].Funds_start = 5 * startingfunds
 		t.RoundData[len(t.RoundData)-1].RS_Eq_value = 5 * defaultEquipment // Reset equipment for new half
 	}
 }
@@ -105,12 +109,20 @@ func (t *Team) BuyPhase(Round int, ot bool, t2 *Team, gameR GameRules, g *Game) 
 
 func (t *Team) SpendFunds(amount float64) {
 	RD := &t.RoundData[len(t.RoundData)-1]
+	if amount < 0 {
+		amount = 0
+	}
+
 	if amount <= RD.Funds {
 		RD.Funds -= amount
 		RD.Spent += amount
 		RD.FTE_Eq_value += amount + t.GetRSEquipment()
-	} else {
-		// Handle insufficient funds
+	} else if amount > RD.Funds {
+		//limit to max
+		max_amount := RD.Funds
+		RD.Funds -= max_amount
+		RD.Spent += max_amount
+		RD.FTE_Eq_value += max_amount + t.GetRSEquipment()
 	}
 }
 

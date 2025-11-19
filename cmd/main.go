@@ -41,6 +41,10 @@ func main() {
 	customGameRulesPath := ""
 	customABMModelsPath := ""
 	args := os.Args[1:]
+	tournamentMode := false
+	tournamentFormat := "roundrobin"
+	bestOf := 3
+	strategiesCSV := ""
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "-n", "--num":
@@ -94,6 +98,23 @@ func main() {
 		case "-h", "--help":
 			printUsage()
 			return
+		case "--tournament":
+			tournamentMode = true
+		case "--format":
+			if i+1 < len(args) {
+				tournamentFormat = args[i+1]
+				i++
+			}
+		case "--bestof":
+			if i+1 < len(args) {
+				fmt.Sscanf(args[i+1], "%d", &bestOf)
+				i++
+			}
+		case "--strategies":
+			if i+1 < len(args) {
+				strategiesCSV = args[i+1]
+				i++
+			}
 		}
 	}
 
@@ -123,6 +144,19 @@ func main() {
 	if err := ValidateStrategies(config.Team1Strategy, config.Team2Strategy); err != nil {
 		fmt.Printf("❌ Strategy validation failed: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Run tournament mode
+	if tournamentMode {
+		if strategiesCSV == "" {
+			fmt.Println("--strategies is required for tournament mode")
+			os.Exit(1)
+		}
+		if err := runTournament(&config, customConfig, strategiesCSV, tournamentFormat, bestOf); err != nil {
+			fmt.Printf("Error running tournament: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	// Run simulation(s)
@@ -183,13 +217,6 @@ func printUsage() {
 	fmt.Println("  -t1, --team1 <strategy> Team 1 strategy (default: all_in)")
 	fmt.Println("  -t2, --team2 <strategy> Team 2 strategy (default: default_half)")
 	fmt.Println("  -h, --help             Print this help message")
-	fmt.Println("\nAvailable strategies:")
-	fmt.Println("  all_in                 Always invest all available funds")
-	fmt.Println("  default_half           Default strategy that invests half of available funds")
-	fmt.Println("  adaptive_eco_v1        Advanced adaptive economic strategy")
-	fmt.Println("  adaptive_eco_v2        Enhanced adaptive strategy with contextual awareness")
-	fmt.Println("  yolo                   Random investment strategy (high risk)")
-	fmt.Println("  scrooge                Minimal investment strategy (ultra-conservative)")
 	fmt.Println("\nGame Rules Configuration:")
 	fmt.Println("  You can customize game parameters using a JSON file. Example:")
 	fmt.Println("  go run ./cmd -g example_gamerules.json")
@@ -200,7 +227,6 @@ func printUsage() {
 	fmt.Println("    \"otFunds\": 10000.0,           // Overtime starting funds")
 	fmt.Println("    \"startingFunds\": 1000.0,      // Match starting funds")
 	fmt.Println("    \"halfLength\": 12,             // Rounds per half")
-	fmt.Println("    \"csfR\": 0.7,                  // Contest success function parameter")
 	fmt.Println("    \"otHalfLength\": 3             // Overtime rounds per half")
 	fmt.Println("  }")
 	fmt.Println("  ")

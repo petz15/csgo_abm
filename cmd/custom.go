@@ -105,7 +105,11 @@ func ValidateStrategies(team1Strategy, team2Strategy string) error {
 		"adaptive_eco_v2": true,
 		"smart_v1":        true,
 		"all_in_v2":       true,
-		"ml_v1":           true,
+		"ml_dqn":          true,
+		"ml_sgd":          true,
+		"ml_tree":         true,
+		"ml_forest":       true,
+		"casual":          true,
 	}
 
 	if !availableStrategies[team1Strategy] {

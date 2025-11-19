@@ -200,7 +200,7 @@ func (r *Round) CalculateRoundOutcome(Team1 *Team, Team2 *Team) {
 	}
 
 	// Get comprehensive round outcome from ABM distributions (uses CT win probability)
-	r.Calc_Outcome = DetermineRoundOutcome(ctequipment, tequipment)
+	r.Calc_Outcome = DetermineRoundOutcome(ctequipment, tequipment, r.game.rng)
 
 	// Determine which team won
 	r.IsT1WinnerTeam = !r.Calc_Outcome.CTWins

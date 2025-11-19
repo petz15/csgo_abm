@@ -84,7 +84,7 @@ func GetCSFRValue() float64 {
 
 // DetermineRoundOutcome determines all aspects of a round outcome based on CSF probability.
 // csfProb should be in [0,1], representing the CT win probability.
-func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64) RoundOutcome {
+func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64, rng *rand.Rand) RoundOutcome {
 	assertLoaded("DetermineRoundOutcome")
 
 	outcome := RoundOutcome{}
@@ -92,24 +92,24 @@ func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64) RoundOutcome {
 	outcome.CSF = CSF(ct_eq_val, t_eq_val)
 
 	// 1. Determine winner
-	outcome.StochasticValues.RNG_CSF = rand.Float64()
+	outcome.StochasticValues.RNG_CSF = rng.Float64()
 	outcome.CTWins = outcome.StochasticValues.RNG_CSF < outcome.CSF
 	side := determineSide(outcome.CTWins)
 
 	outcome.CSFKey = csfKeyForProb(outcome.CSF)
 
 	// 2. Determine round end reason
-	sampleRoundEndReason(side, &outcome)
+	sampleRoundEndReason(side, &outcome, rng)
 
 	// 3. Determine bomb planted status
-	determineBombPlanted(&outcome)
+	determineBombPlanted(&outcome, rng)
 
 	// 4. Determine survivors
 	winningSide := side
 	losingSide := oppositeSide(side)
 
-	winningSurvivors := sampleSurvivors(winningSide, &outcome)
-	losingSurvivors := sampleSurvivors(losingSide, &outcome)
+	winningSurvivors := sampleSurvivors(winningSide, &outcome, rng)
+	losingSurvivors := sampleSurvivors(losingSide, &outcome, rng)
 	if outcome.CTWins {
 		outcome.CTSurvivors = winningSurvivors
 		outcome.TSurvivors = losingSurvivors
@@ -121,8 +121,8 @@ func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64) RoundOutcome {
 	// 5. Determine equipment saved
 
 	total_equipment := ct_eq_val + t_eq_val
-	sampleEquipment(winningSide, &outcome)
-	sampleEquipment(losingSide, &outcome)
+	sampleEquipment(winningSide, &outcome, rng)
+	sampleEquipment(losingSide, &outcome, rng)
 
 	// 6. Calculate equipment value per surviving player and making sure, players cant save more than total equipment
 	determineEquipmentSavedPerPlayer(&outcome, total_equipment)
@@ -135,7 +135,7 @@ func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64) RoundOutcome {
 // ============================================================================
 
 // sampleRoundEndReason samples the round end reason from distributions
-func sampleRoundEndReason(side string, oc *RoundOutcome) {
+func sampleRoundEndReason(side string, oc *RoundOutcome, rng *rand.Rand) {
 	sideMap := distributions.RoundEndReason[side]
 	if sideMap == nil {
 		panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: missing round end reason distributions for side='%s'", side))
@@ -146,7 +146,7 @@ func sampleRoundEndReason(side string, oc *RoundOutcome) {
 		panic(fmt.Sprintf("probabilities.go: sampleRoundEndReason: missing or empty cumulative distribution for side='%s', csfKey='%s'", side, oc.CSFKey))
 	}
 
-	randValue := rand.Float64() * 100.0
+	randValue := rng.Float64() * 100.0
 	oc.StochasticValues.RNG_RoundOutcome = randValue
 
 	// Use pre-sorted slice
@@ -163,7 +163,7 @@ func sampleRoundEndReason(side string, oc *RoundOutcome) {
 }
 
 // determineBombPlanted determines if bomb was planted based on reason code
-func determineBombPlanted(oc *RoundOutcome) {
+func determineBombPlanted(oc *RoundOutcome, rng *rand.Rand) {
 	// Reason codes: 1=Target Bombed, 2=T Win Elimination, 3=CT Win Defuse, 4=CT Win Elimination
 	switch oc.ReasonCode {
 	case 1, 3:
@@ -178,7 +178,7 @@ func determineBombPlanted(oc *RoundOutcome) {
 		if !ok {
 			panic(fmt.Sprintf("probabilities.go: determineBombPlanted: missing bomb planted probability for csfKey='%s'", oc.CSFKey))
 		}
-		oc.StochasticValues.RNG_Bombplant = rand.Float64()
+		oc.StochasticValues.RNG_Bombplant = rng.Float64()
 		oc.BombPlanted = oc.StochasticValues.RNG_Bombplant <= prob
 	default:
 		oc.BombPlanted = false
@@ -186,7 +186,7 @@ func determineBombPlanted(oc *RoundOutcome) {
 }
 
 // sampleSurvivors samples number of survivors from distributions
-func sampleSurvivors(side string, oc *RoundOutcome) int {
+func sampleSurvivors(side string, oc *RoundOutcome, rng *rand.Rand) int {
 	sideMap := distributions.Survivors[side]
 	if sideMap == nil {
 		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing survivor distributions for side='%s'", side))
@@ -202,7 +202,7 @@ func sampleSurvivors(side string, oc *RoundOutcome) int {
 		panic(fmt.Sprintf("probabilities.go: sampleSurvivors: missing or empty cumulative lookup for side='%s', reasonCode='%d', csfKey='%s'", side, oc.ReasonCode, oc.CSFKey))
 	}
 
-	randValue := rand.Float64() * 100.0
+	randValue := rng.Float64() * 100.0
 	if side == "CT" {
 		oc.StochasticValues.RNG_SurvivorsCT = randValue
 	} else {
@@ -223,7 +223,7 @@ func sampleSurvivors(side string, oc *RoundOutcome) int {
 }
 
 // sampleEquipment samples equipment saved value from distributions
-func sampleEquipment(side string, oc *RoundOutcome) {
+func sampleEquipment(side string, oc *RoundOutcome, rng *rand.Rand) {
 	var survivors int = 0
 
 	if side == "CT" {
@@ -256,11 +256,11 @@ func sampleEquipment(side string, oc *RoundOutcome) {
 	saved_eq_pct := 0.0
 	for i := 0; i < survivors; i++ {
 		if side == "CT" {
-			oc.StochasticValues.RNG_EquipmentCT = append(oc.StochasticValues.RNG_EquipmentCT, rand.Float64())
+			oc.StochasticValues.RNG_EquipmentCT = append(oc.StochasticValues.RNG_EquipmentCT, rng.Float64())
 			saved_eq_pct = sampleFromECDFLookup(percentiles, oc.StochasticValues.RNG_EquipmentCT[i])
 			oc.CTEquipmentSharePerPlayer = append(oc.CTEquipmentSharePerPlayer, saved_eq_pct)
 		} else {
-			oc.StochasticValues.RNG_EquipmentT = append(oc.StochasticValues.RNG_EquipmentT, rand.Float64())
+			oc.StochasticValues.RNG_EquipmentT = append(oc.StochasticValues.RNG_EquipmentT, rng.Float64())
 			saved_eq_pct = sampleFromECDFLookup(percentiles, oc.StochasticValues.RNG_EquipmentT[i])
 			oc.TEquipmentSharePerPlayer = append(oc.TEquipmentSharePerPlayer, saved_eq_pct)
 		}

@@ -21,8 +21,14 @@ func InvestDecisionMaking_allin_v2(ctx StrategyContext_simple) float64 {
 	if ctx.ConsecutiveLosses < 1 {
 		return ctx.Funds * 0.9
 	} else if ctx.ConsecutiveLosses == 1 {
-		return ctx.Funds * 0.2
-	} else {
-		return ctx.Funds * 0.9
+		return ctx.Funds
+	} else if ctx.ConsecutiveLosses == 2 {
+		return ctx.Funds * 0.1
+	} else if ctx.ConsecutiveLosses == 3 {
+		return ctx.Funds * 0.3
+	} else if ctx.ConsecutiveLosses >= 4 {
+		return ctx.Funds
 	}
+
+	return ctx.Funds * 0.8
 }

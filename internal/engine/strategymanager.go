@@ -21,7 +21,7 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		Equipment:         team.GetRSEquipment(),
 		IsOvertime:        isOvertime,
 		IsPistolRound:     isPistolRound(curround, gameR.HalfLength),
-		IsEcoAfterPistol:  isEcoAfterPistol(curround, gameR.HalfLength, team.GetScore(), opponent.GetScore()),
+		IsAfterPistol:     isAfterPistol(curround, gameR.HalfLength, team.GetScore(), opponent.GetScore()),
 		IsLastRoundHalf:   isLastRoundHalf(curround, gameR.HalfLength),
 		HalfLength:        gameR.HalfLength,
 		OTHalfLength:      gameR.OTHalfLength,
@@ -29,6 +29,10 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		EnemySurvivors:    opponent.GetpreviousSurvivors(),
 		RoundEndReason:    g.GetPreviousRoundEndReason(),
 		Is_BombPlanted:    g.GetPreviousBombPlant(),
+		Max_Funds:         gameR.MaxFunds,
+		DefaultEquipment:  gameR.DefaultEquipment,
+		OTFunds:           gameR.OTFunds,
+		OTEquipment:       gameR.OTEquipment,
 	}
 
 	switch team.Strategy {
@@ -48,8 +52,16 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		return strategy.InvestDecisionMaking_smart_v1(ctx)
 	case "all_in_v2":
 		return strategy.InvestDecisionMaking_allin_v2(ctx)
-	case "ml_v1":
-		return strategy.InvestDecisionMaking_ml_v1(ctx)
+	case "ml_dqn":
+		return strategy.InvestDecisionMaking_ml_dqn(ctx)
+	case "ml_sgd":
+		return strategy.InvestDecisionMaking_ml_sgd(ctx)
+	case "ml_tree":
+		return strategy.InvestDecisionMaking_ml_tree(ctx)
+	case "ml_forest":
+		return strategy.InvestDecisionMaking_ml_forest(ctx)
+	case "casual":
+		return strategy.InvestDecisionMaking_casual(ctx)
 	default:
 		return strategy.InvestDecisionMaking_allin(ctx)
 	}
@@ -65,7 +77,7 @@ func isPistolRound(round int, halfLength int) bool {
 	return round == 1 || round == halfLength+1
 }
 
-func isEcoAfterPistol(round int, halfLength int, ownScore, opponentScore int) bool {
+func isAfterPistol(round int, halfLength int, ownScore, opponentScore int) bool {
 	// Round 2 or 17, and we won the pistol round
 	return (round == 2 && ownScore > opponentScore) || (round == halfLength+1 && ownScore > opponentScore)
 }

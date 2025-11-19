@@ -1,5 +1,7 @@
 package strategy
 
+import "math"
+
 func InvestDecisionMaking_smart_v1(ctx StrategyContext_simple) float64 {
 
 	if ctx.IsLastRoundHalf {
@@ -16,16 +18,18 @@ func InvestDecisionMaking_smart_v1(ctx StrategyContext_simple) float64 {
 		return ctx.Funds
 	}
 
-	if ctx.ConsecutiveLosses < 1 {
-		return ctx.Funds * 0.8
-	} else if ctx.ConsecutiveLosses == 1 {
-		return ctx.Funds * 0.2
-	} else if ctx.ConsecutiveLosses == 2 {
-		return ctx.Funds * 0.3
-	} else if ctx.ConsecutiveLosses == 3 {
-		return ctx.Funds * 0.4
-	} else {
-		return ctx.Funds * 0.9
+	if ctx.ConsecutiveLosses < 1 && ctx.EnemySurvivors < 1 {
+		return math.Min(ctx.DefaultEquipment*2*5, ctx.Funds)
 	}
+
+	if ctx.ConsecutiveLosses < 1 {
+		return ctx.Funds * 0.9
+	} else if ctx.ConsecutiveLosses == 1 {
+		return ctx.Funds * 0.1
+	} else if ctx.ConsecutiveLosses >= 4 {
+		return ctx.Funds
+	}
+
+	return ctx.Funds * 0.8
 
 }
