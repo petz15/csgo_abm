@@ -84,7 +84,7 @@ func GetCSFRValue() float64 {
 
 // DetermineRoundOutcome determines all aspects of a round outcome based on CSF probability.
 // csfProb should be in [0,1], representing the CT win probability.
-func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64, rng *rand.Rand) RoundOutcome {
+func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64, rng *rand.Rand, gameR GameRules) RoundOutcome {
 	assertLoaded("DetermineRoundOutcome")
 
 	outcome := RoundOutcome{}
@@ -104,28 +104,33 @@ func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64, rng *rand.Rand) 
 	// 3. Determine bomb planted status
 	determineBombPlanted(&outcome, rng)
 
-	// 4. Determine survivors
-	winningSide := side
-	losingSide := oppositeSide(side)
+	if gameR.WithSaves { //to test robustness and certain effects, Survivors and Equipment Saved can be excluded
+		// 4. Determine survivors
+		winningSide := side
+		losingSide := oppositeSide(side)
 
-	winningSurvivors := sampleSurvivors(winningSide, &outcome, rng)
-	losingSurvivors := sampleSurvivors(losingSide, &outcome, rng)
-	if outcome.CTWins {
-		outcome.CTSurvivors = winningSurvivors
-		outcome.TSurvivors = losingSurvivors
+		winningSurvivors := sampleSurvivors(winningSide, &outcome, rng)
+		losingSurvivors := sampleSurvivors(losingSide, &outcome, rng)
+		if outcome.CTWins {
+			outcome.CTSurvivors = winningSurvivors
+			outcome.TSurvivors = losingSurvivors
+		} else {
+			outcome.TSurvivors = winningSurvivors
+			outcome.CTSurvivors = losingSurvivors
+		}
+
+		// 5. Determine equipment saved
+
+		total_equipment := ct_eq_val + t_eq_val
+		sampleEquipment(winningSide, &outcome, rng)
+		sampleEquipment(losingSide, &outcome, rng)
+
+		// 6. Calculate equipment value per surviving player and making sure, players cant save more than total equipment
+		determineEquipmentSavedPerPlayer(&outcome, total_equipment)
 	} else {
-		outcome.TSurvivors = winningSurvivors
-		outcome.CTSurvivors = losingSurvivors
+		outcome.CTSurvivors = 0
+		outcome.TSurvivors = 0
 	}
-
-	// 5. Determine equipment saved
-
-	total_equipment := ct_eq_val + t_eq_val
-	sampleEquipment(winningSide, &outcome, rng)
-	sampleEquipment(losingSide, &outcome, rng)
-
-	// 6. Calculate equipment value per surviving player and making sure, players cant save more than total equipment
-	determineEquipmentSavedPerPlayer(&outcome, total_equipment)
 
 	return outcome
 }

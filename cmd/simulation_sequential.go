@@ -79,6 +79,13 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 	starttime := time.Now()
 	stats := analysis.NewStats(config.NumSimulations, "sequential")
 
+	// Initialize advanced analyzer if enabled
+	var advancedAnalyzer *analysis.AdvancedAnalyzer
+	if config.AdvancedAnalysis {
+		advancedAnalyzer = analysis.NewAdvancedAnalyzer()
+		fmt.Println("📊 Advanced economic analysis: ENABLED")
+	}
+
 	// Display simulation mode and export information
 	if config.ExportDetailedResults {
 		fmt.Printf("Sequential simulation with individual result export enabled\n")
@@ -106,6 +113,15 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 
 		// Update statistics with the result
 		updateglobalstats(stats, result)
+
+		// Process game for advanced analysis if enabled
+		if advancedAnalyzer != nil && result.GameData != nil {
+			advancedAnalyzer.ProcessGame(result.GameData)
+
+			// Cleanup game data after processing
+			result.GameData.Cleanup()
+			result.GameData = nil
+		}
 
 		// Periodic garbage collection every 10% of simulations if over 1000, otherwise every 100
 		var gcInterval int
@@ -136,6 +152,23 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 
 	// Generate comprehensive final summary
 	showstats(stats)
+
+	// Finalize and export advanced analysis if enabled
+	if advancedAnalyzer != nil {
+		fmt.Println("\n📊 Finalizing advanced economic analysis...")
+		advancedAnalysis := advancedAnalyzer.Finalize()
+
+		// Export graphs and analysis
+		exporter := analysis.NewGraphExporter(advancedAnalysis, config.Exportpath)
+		if err := exporter.ExportAll(); err != nil {
+			fmt.Printf("Warning: Failed to export advanced analysis: %v\n", err)
+		} else {
+			fmt.Println("✅ Advanced analysis exported successfully")
+		}
+
+		// Print summary
+		analysis.PrintAnalysisSummary(advancedAnalysis)
+	}
 
 	// Export summary statistics
 	if config.ExportDetailedResults {

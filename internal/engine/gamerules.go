@@ -15,6 +15,7 @@ type GameRules struct {
 	OTHalfLength     int     `json:"otHalfLength"`     // Length of overtime half in rounds
 	MaxFunds         float64 `json:"maxFunds"`         // Maximum funds allowed for a team
 	LossBonusCalc    bool    `json:"lossBonusCalc"`    // true: loss bonus reduced 1 after each win, false: resets after each win
+	WithSaves        bool    `json:"withSaves"`        // true: teams can save weapons between rounds
 }
 
 // getDefaultRules returns the default game rules configuration
@@ -28,6 +29,7 @@ func getDefaultRules() GameRules {
 		OTHalfLength:     3,      // Default value for Overtime half length
 		MaxFunds:         999999, // Default value for Maximum funds
 		LossBonusCalc:    true,
+		WithSaves:        true,
 	}
 }
 
@@ -69,6 +71,11 @@ func validateGameRulesStrict(rules GameRules) bool {
 
 	if rules.LossBonusCalc != true && rules.LossBonusCalc != false {
 		fmt.Println("Loss bonus calculation flag must be true or false")
+		return false
+	}
+
+	if rules.WithSaves != true && rules.WithSaves != false {
+		fmt.Println("With saves flag must be true or false")
 		return false
 	}
 
@@ -123,6 +130,9 @@ func NewGameRules(pathtoFile string) (GameRules, bool) {
 		}
 		if jsonRules.LossBonusCalc == true || jsonRules.LossBonusCalc == false {
 			candidateRules.LossBonusCalc = jsonRules.LossBonusCalc
+		}
+		if jsonRules.WithSaves == true || jsonRules.WithSaves == false {
+			candidateRules.WithSaves = jsonRules.WithSaves
 		}
 
 		// Strict validation - if ANY value fails, use all defaults

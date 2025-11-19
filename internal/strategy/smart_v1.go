@@ -18,8 +18,10 @@ func InvestDecisionMaking_smart_v1(ctx StrategyContext_simple) float64 {
 		return ctx.Funds
 	}
 
-	if ctx.ConsecutiveLosses < 1 && ctx.EnemySurvivors < 1 {
-		return math.Min(ctx.DefaultEquipment*2*5, ctx.Funds)
+	if ctx.WithSaves {
+		if ctx.ConsecutiveLosses < 1 && ctx.EnemySurvivors < 1 {
+			return math.Min(ctx.DefaultEquipment*2*5, ctx.Funds)
+		}
 	}
 
 	if ctx.ConsecutiveLosses < 1 {

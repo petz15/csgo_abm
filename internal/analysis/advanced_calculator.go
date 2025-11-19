@@ -34,6 +34,11 @@ type AdvancedAnalyzer struct {
 
 	// Win condition tracking
 	winConditionSamples []WinConditionSample
+
+	// Investment ratio tracking
+	team1InvestmentRatios []InvestmentRatioSample
+	team2InvestmentRatios []InvestmentRatioSample
+	roundInvestmentMap    map[int]*RoundInvestmentData
 }
 
 // ComebackAttempt tracks a potential comeback scenario
@@ -73,21 +78,37 @@ type WinConditionSample struct {
 	Team2Spent         float64
 }
 
+// InvestmentRatioSample tracks a single investment ratio observation
+type InvestmentRatioSample struct {
+	RoundNumber int
+	Ratio       float64 // Spent / Funds_start
+	Won         bool
+}
+
+// RoundInvestmentData accumulates investment data for a specific round number
+type RoundInvestmentData struct {
+	Team1Ratios []float64
+	Team2Ratios []float64
+}
+
 // NewAdvancedAnalyzer creates a new analyzer
 func NewAdvancedAnalyzer() *AdvancedAnalyzer {
 	return &AdvancedAnalyzer{
-		analysis:            NewAdvancedAnalysis(),
-		economicAdvantages:  make([]float64, 0, 10000),
-		equipmentAdvantages: make([]float64, 0, 10000),
-		allFundsTeam1:       make([]float64, 0, 10000),
-		allFundsTeam2:       make([]float64, 0, 10000),
-		allEquipmentTeam1:   make([]float64, 0, 10000),
-		allEquipmentTeam2:   make([]float64, 0, 10000),
-		roundDataMap:        make(map[int]*RoundTimePoint),
-		comebackScenarios:   make(map[int][]ComebackAttempt),
-		halfSideRounds:      make([]HalfSideRound, 0, 10000),
-		winConditionSamples: make([]WinConditionSample, 0, 10000),
-		lastWinner:          "",
+		analysis:              NewAdvancedAnalysis(),
+		economicAdvantages:    make([]float64, 0, 10000),
+		equipmentAdvantages:   make([]float64, 0, 10000),
+		allFundsTeam1:         make([]float64, 0, 10000),
+		allFundsTeam2:         make([]float64, 0, 10000),
+		allEquipmentTeam1:     make([]float64, 0, 10000),
+		allEquipmentTeam2:     make([]float64, 0, 10000),
+		roundDataMap:          make(map[int]*RoundTimePoint),
+		comebackScenarios:     make(map[int][]ComebackAttempt),
+		halfSideRounds:        make([]HalfSideRound, 0, 10000),
+		winConditionSamples:   make([]WinConditionSample, 0, 10000),
+		team1InvestmentRatios: make([]InvestmentRatioSample, 0, 10000),
+		team2InvestmentRatios: make([]InvestmentRatioSample, 0, 10000),
+		roundInvestmentMap:    make(map[int]*RoundInvestmentData),
+		lastWinner:            "",
 	}
 }
 
@@ -175,6 +196,37 @@ func (aa *AdvancedAnalyzer) ProcessGame(game *engine.Game) {
 				Team:           "Team2",
 			},
 		)
+
+		// Track investment ratios (Spent / Funds_start)
+		team1InvestmentRatio := 0.0
+		if team1Data.Funds_start > 0 {
+			team1InvestmentRatio = team1Data.Spent / team1Data.Funds_start
+		}
+		team2InvestmentRatio := 0.0
+		if team2Data.Funds_start > 0 {
+			team2InvestmentRatio = team2Data.Spent / team2Data.Funds_start
+		}
+
+		aa.team1InvestmentRatios = append(aa.team1InvestmentRatios, InvestmentRatioSample{
+			RoundNumber: roundNum,
+			Ratio:       team1InvestmentRatio,
+			Won:         round.IsT1WinnerTeam,
+		})
+		aa.team2InvestmentRatios = append(aa.team2InvestmentRatios, InvestmentRatioSample{
+			RoundNumber: roundNum,
+			Ratio:       team2InvestmentRatio,
+			Won:         !round.IsT1WinnerTeam,
+		})
+
+		// Track investment ratios by round
+		if _, exists := aa.roundInvestmentMap[roundNum]; !exists {
+			aa.roundInvestmentMap[roundNum] = &RoundInvestmentData{
+				Team1Ratios: make([]float64, 0),
+				Team2Ratios: make([]float64, 0),
+			}
+		}
+		aa.roundInvestmentMap[roundNum].Team1Ratios = append(aa.roundInvestmentMap[roundNum].Team1Ratios, team1InvestmentRatio)
+		aa.roundInvestmentMap[roundNum].Team2Ratios = append(aa.roundInvestmentMap[roundNum].Team2Ratios, team2InvestmentRatio)
 
 		// Update scores
 		if round.IsT1WinnerTeam {
@@ -388,6 +440,9 @@ func (aa *AdvancedAnalyzer) Finalize() *AdvancedAnalysis {
 
 	// Finalize streak analysis
 	aa.finalizeStreakAnalysis()
+
+	// Calculate investment ratios
+	aa.calculateInvestmentRatios()
 
 	return aa.analysis
 }
@@ -908,4 +963,146 @@ func (aa *AdvancedAnalyzer) finalizeStreakAnalysis() {
 	sort.Slice(aa.analysis.Streaks.StreakEconomicImpact, func(i, j int) bool {
 		return aa.analysis.Streaks.StreakEconomicImpact[i].StreakLength < aa.analysis.Streaks.StreakEconomicImpact[j].StreakLength
 	})
+}
+
+// calculateInvestmentRatios calculates investment ratio statistics and distributions
+func (aa *AdvancedAnalyzer) calculateInvestmentRatios() {
+	// Calculate overall statistics for Team1
+	if len(aa.team1InvestmentRatios) > 0 {
+		// Average
+		sum := 0.0
+		for _, sample := range aa.team1InvestmentRatios {
+			sum += sample.Ratio
+		}
+		aa.analysis.InvestmentRatio.Team1AverageRatio = sum / float64(len(aa.team1InvestmentRatios))
+
+		// Median
+		ratios := make([]float64, len(aa.team1InvestmentRatios))
+		for i, sample := range aa.team1InvestmentRatios {
+			ratios[i] = sample.Ratio
+		}
+		aa.analysis.InvestmentRatio.Team1MedianRatio = calculateMedianFloat(ratios)
+	}
+
+	// Calculate overall statistics for Team2
+	if len(aa.team2InvestmentRatios) > 0 {
+		// Average
+		sum := 0.0
+		for _, sample := range aa.team2InvestmentRatios {
+			sum += sample.Ratio
+		}
+		aa.analysis.InvestmentRatio.Team2AverageRatio = sum / float64(len(aa.team2InvestmentRatios))
+
+		// Median
+		ratios := make([]float64, len(aa.team2InvestmentRatios))
+		for i, sample := range aa.team2InvestmentRatios {
+			ratios[i] = sample.Ratio
+		}
+		aa.analysis.InvestmentRatio.Team2MedianRatio = calculateMedianFloat(ratios)
+	}
+
+	// Create 10% step distributions (0-10%, 10-20%, ..., 90-100%)
+	aa.analysis.InvestmentRatio.Team1Distribution = calculateInvestmentRatioBins(aa.team1InvestmentRatios)
+	aa.analysis.InvestmentRatio.Team2Distribution = calculateInvestmentRatioBins(aa.team2InvestmentRatios)
+
+	// Finalize round-by-round investment data
+	for roundNum, data := range aa.roundInvestmentMap {
+		point := RoundInvestmentPoint{
+			RoundNumber:           roundNum,
+			GamesReachedThisRound: len(data.Team1Ratios),
+		}
+
+		if len(data.Team1Ratios) > 0 {
+			sum := 0.0
+			for _, r := range data.Team1Ratios {
+				sum += r
+			}
+			point.Team1AvgInvestmentRatio = sum / float64(len(data.Team1Ratios))
+			point.Team1MedianInvestmentRatio = calculateMedianFloat(data.Team1Ratios)
+		}
+
+		if len(data.Team2Ratios) > 0 {
+			sum := 0.0
+			for _, r := range data.Team2Ratios {
+				sum += r
+			}
+			point.Team2AvgInvestmentRatio = sum / float64(len(data.Team2Ratios))
+			point.Team2MedianInvestmentRatio = calculateMedianFloat(data.Team2Ratios)
+		}
+
+		aa.analysis.InvestmentRatio.RoundInvestmentData = append(aa.analysis.InvestmentRatio.RoundInvestmentData, point)
+	}
+
+	// Sort by round number
+	sort.Slice(aa.analysis.InvestmentRatio.RoundInvestmentData, func(i, j int) bool {
+		return aa.analysis.InvestmentRatio.RoundInvestmentData[i].RoundNumber < aa.analysis.InvestmentRatio.RoundInvestmentData[j].RoundNumber
+	})
+}
+
+// calculateMedianFloat calculates the median of a slice of float64 values
+func calculateMedianFloat(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+
+	// Create a copy and sort it
+	sorted := make([]float64, len(values))
+	copy(sorted, values)
+	sort.Float64s(sorted)
+
+	n := len(sorted)
+	if n%2 == 0 {
+		// Even number of elements: average of middle two
+		return (sorted[n/2-1] + sorted[n/2]) / 2.0
+	}
+	// Odd number of elements: middle element
+	return sorted[n/2]
+}
+
+// calculateInvestmentRatioBins creates 10% step bins for investment ratios
+func calculateInvestmentRatioBins(samples []InvestmentRatioSample) []InvestmentRatioBin {
+	bins := make([]InvestmentRatioBin, 10)
+
+	// Initialize bins
+	for i := 0; i < 10; i++ {
+		bins[i] = InvestmentRatioBin{
+			MinRatio: float64(i) * 0.1,
+			MaxRatio: float64(i+1) * 0.1,
+		}
+	}
+
+	// Count frequencies and track wins
+	totalRatioPerBin := make([]float64, 10)
+	winsPerBin := make([]int, 10)
+
+	for _, sample := range samples {
+		// Determine which bin this ratio falls into
+		binIndex := int(sample.Ratio * 10)
+		if binIndex < 0 {
+			binIndex = 0
+		}
+		if binIndex >= 10 {
+			binIndex = 9 // Cap at 100%
+		}
+
+		bins[binIndex].Frequency++
+		totalRatioPerBin[binIndex] += sample.Ratio
+		if sample.Won {
+			winsPerBin[binIndex]++
+		}
+	}
+
+	// Calculate percentages, average ratios, and win rates
+	totalSamples := float64(len(samples))
+	for i := range bins {
+		if totalSamples > 0 {
+			bins[i].Percentage = float64(bins[i].Frequency) / totalSamples * 100
+		}
+		if bins[i].Frequency > 0 {
+			bins[i].AvgRatio = totalRatioPerBin[i] / float64(bins[i].Frequency)
+			bins[i].WinRate = float64(winsPerBin[i]) / float64(bins[i].Frequency)
+		}
+	}
+
+	return bins
 }

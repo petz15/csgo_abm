@@ -26,6 +26,7 @@ type StrategyContext_simple struct {
 	DefaultEquipment  float64
 	OTFunds           float64
 	OTEquipment       float64
+	WithSaves         bool
 }
 
 func empty() {

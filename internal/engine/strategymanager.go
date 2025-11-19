@@ -34,6 +34,7 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		DefaultEquipment:  gameR.DefaultEquipment,
 		OTFunds:           gameR.OTFunds,
 		OTEquipment:       gameR.OTEquipment,
+		WithSaves:         gameR.WithSaves,
 	}
 
 	switch team.Strategy {

@@ -27,6 +27,9 @@ type AdvancedAnalysis struct {
 
 	// Streak Analysis
 	Streaks StreakAnalysis `json:"streaks"`
+
+	// Investment Ratio Analysis
+	InvestmentRatio InvestmentRatioAnalysis `json:"investment_ratio"`
 }
 
 // EconomicMomentumAnalysis tracks economic flow and momentum
@@ -311,6 +314,42 @@ type MomentumShift struct {
 	ScoreAfterShift  [2]int  `json:"score_after_shift"`
 }
 
+// InvestmentRatioAnalysis tracks investment ratio (spent/funds_start) for each team
+type InvestmentRatioAnalysis struct {
+	// Overall statistics
+	Team1AverageRatio float64 `json:"team1_average_ratio"`
+	Team1MedianRatio  float64 `json:"team1_median_ratio"`
+	Team2AverageRatio float64 `json:"team2_average_ratio"`
+	Team2MedianRatio  float64 `json:"team2_median_ratio"`
+
+	// Distribution by 10% steps (0-10%, 10-20%, ..., 90-100%)
+	Team1Distribution []InvestmentRatioBin `json:"team1_distribution"`
+	Team2Distribution []InvestmentRatioBin `json:"team2_distribution"`
+
+	// Round-by-round investment ratio time series
+	RoundInvestmentData []RoundInvestmentPoint `json:"round_investment_data"`
+}
+
+// InvestmentRatioBin represents a 10% range bin for investment ratios
+type InvestmentRatioBin struct {
+	MinRatio   float64 `json:"min_ratio"`  // e.g., 0.0, 0.1, 0.2, ..., 0.9
+	MaxRatio   float64 `json:"max_ratio"`  // e.g., 0.1, 0.2, 0.3, ..., 1.0
+	Frequency  int     `json:"frequency"`  // Number of rounds in this bin
+	Percentage float64 `json:"percentage"` // Percentage of total rounds
+	AvgRatio   float64 `json:"avg_ratio"`  // Average ratio within this bin
+	WinRate    float64 `json:"win_rate"`   // Win rate for rounds in this bin
+}
+
+// RoundInvestmentPoint represents aggregated investment data for a specific round number
+type RoundInvestmentPoint struct {
+	RoundNumber                int     `json:"round_number"`
+	Team1AvgInvestmentRatio    float64 `json:"team1_avg_investment_ratio"`
+	Team2AvgInvestmentRatio    float64 `json:"team2_avg_investment_ratio"`
+	Team1MedianInvestmentRatio float64 `json:"team1_median_investment_ratio"`
+	Team2MedianInvestmentRatio float64 `json:"team2_median_investment_ratio"`
+	GamesReachedThisRound      int     `json:"games_reached_this_round"`
+}
+
 // NewAdvancedAnalysis creates a new advanced analysis structure
 func NewAdvancedAnalysis() *AdvancedAnalysis {
 	return &AdvancedAnalysis{
@@ -344,6 +383,11 @@ func NewAdvancedAnalysis() *AdvancedAnalysis {
 			Team2LossStreaks:     make([]StreakInfo, 0),
 			StreakEconomicImpact: make([]StreakEconomicImpact, 0),
 			MomentumShifts:       make([]MomentumShift, 0),
+		},
+		InvestmentRatio: InvestmentRatioAnalysis{
+			Team1Distribution:   make([]InvestmentRatioBin, 0),
+			Team2Distribution:   make([]InvestmentRatioBin, 0),
+			RoundInvestmentData: make([]RoundInvestmentPoint, 0),
 		},
 	}
 }

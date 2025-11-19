@@ -6,5 +6,6 @@
   "halfLength": 15,
   "otHalfLength": 3,
   "maxFunds": 80000.0,
-  "lossBonusCalc": true
+  "lossBonusCalc": true,
+  "withSaves": false
 }
