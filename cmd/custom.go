@@ -94,32 +94,3 @@ func validateExportPath(exportPath string) error {
 	return nil
 }
 
-// ValidateStrategies checks if the specified strategies are available
-func ValidateStrategies(team1Strategy, team2Strategy string) error {
-	availableStrategies := map[string]bool{
-		"all_in":          true,
-		"default_half":    true,
-		"adaptive_eco_v1": true,
-		"yolo":            true,
-		"scrooge":         true,
-		"adaptive_eco_v2": true,
-		"smart_v1":        true,
-		"all_in_v2":       true,
-		"ml_dqn":          true,
-		"ml_sgd":          true,
-		"ml_tree":         true,
-		"ml_forest":       true,
-		"casual":          true,
-	}
-
-	if !availableStrategies[team1Strategy] {
-		return fmt.Errorf("unknown strategy for team 1: '%s'. Available strategies: all_in, default_half, adaptive_eco_v1, yolo, scrooge", team1Strategy)
-	}
-
-	if !availableStrategies[team2Strategy] {
-		return fmt.Errorf("unknown strategy for team 2: '%s'. Available strategies: all_in, default_half, adaptive_eco_v1, yolo, scrooge", team2Strategy)
-	}
-
-	fmt.Printf("✅ Team strategies validated: %s vs %s\n", team1Strategy, team2Strategy)
-	return nil
-}

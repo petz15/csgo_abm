@@ -19,6 +19,7 @@ type Team_RoundData struct {
 	Score_Start     int
 	Score_End       int     //updated at the end of the round
 	Consecutiveloss int     // Consecutive losses for the team, updated at the end of the round
+	Consecutivewins int     // Consecutive wins for the team, updated at the end of the round
 	LossBonusLevel  int     // Level of loss bonus calculated at the end of the round
 	Spent           float64 // Total funds spent by the team during buy time
 }
@@ -37,6 +38,7 @@ func NewTeam(name string, startingfunds float64, side bool, defaultequipment flo
 		Score_Start:     0,
 		Score_End:       0,
 		Consecutiveloss: 0,
+		Consecutivewins: 0,
 		LossBonusLevel:  1,
 		Spent:           0,
 	}
@@ -63,6 +65,7 @@ func (t *Team) NewRound(defaultequipment float64) {
 		Score_Start:     previousRound.Score_End,
 		Score_End:       previousRound.Score_End,
 		Consecutiveloss: previousRound.Consecutiveloss,
+		Consecutivewins: previousRound.Consecutivewins,
 		LossBonusLevel:  previousRound.LossBonusLevel,
 		Spent:           0,
 	}
@@ -74,8 +77,10 @@ func (t *Team) RoundEnd(winner bool) {
 	if winner {
 		RD.Score_End = RD.Score_Start + 1 // Increment score for winning team
 		RD.Consecutiveloss = 0
+		RD.Consecutivewins++
 	} else {
 		RD.Consecutiveloss++
+		RD.Consecutivewins = 0
 	}
 
 }
@@ -139,6 +144,11 @@ func (t *Team) GetCurrentLossBonusLevel() int {
 func (t *Team) GetConsecutiveloss() int {
 	RD := &t.RoundData[len(t.RoundData)-1]
 	return RD.Consecutiveloss
+}
+
+func (t *Team) GetConsecutivewins() int {
+	RD := &t.RoundData[len(t.RoundData)-1]
+	return RD.Consecutivewins
 }
 
 func (t *Team) SetCurrentLossBonusLevel(value int) {

@@ -37,7 +37,7 @@ func main() {
 	args := os.Args[1:]
 	tournamentMode := false
 	tournamentFormat := "roundrobin"
-	bestOf := 3
+	games := 1000
 	strategiesCSV := ""
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -99,9 +99,9 @@ func main() {
 				tournamentFormat = args[i+1]
 				i++
 			}
-		case "--bestof":
+		case "--games":
 			if i+1 < len(args) {
-				fmt.Sscanf(args[i+1], "%d", &bestOf)
+				fmt.Sscanf(args[i+1], "%d", &games)
 				i++
 			}
 		case "--strategies":
@@ -134,19 +134,13 @@ func main() {
 
 	config.GameRules = customConfig.GameRules
 
-	// Validate team strategies
-	if err := ValidateStrategies(config.Team1Strategy, config.Team2Strategy); err != nil {
-		fmt.Printf("❌ Strategy validation failed: %v\n", err)
-		os.Exit(1)
-	}
-
 	// Run tournament mode
 	if tournamentMode {
 		if strategiesCSV == "" {
 			fmt.Println("--strategies is required for tournament mode")
 			os.Exit(1)
 		}
-		if err := runTournament(&config, customConfig, strategiesCSV, tournamentFormat, bestOf); err != nil {
+		if err := runTournament(&config, customConfig, strategiesCSV, tournamentFormat, games); err != nil {
 			fmt.Printf("Error running tournament: %v\n", err)
 			os.Exit(1)
 		}
@@ -210,6 +204,10 @@ func printUsage() {
 	fmt.Println("  -dist, --abmmodels <file> Path to ABM models JSON file (default: abm_models.json)")
 	fmt.Println("  -t1, --team1 <strategy> Team 1 strategy (default: all_in)")
 	fmt.Println("  -t2, --team2 <strategy> Team 2 strategy (default: default_half)")
+	fmt.Println("  --tournament            Run tournament mode instead of single/multi simulation")
+	fmt.Println("  --strategies <list>     Comma-separated strategy list for tournament (required)")
+	fmt.Println("  --format <name>         Tournament format (roundrobin)")
+	fmt.Println("  --games <number>        Games per matchup in tournament (default: 1000)")
 	fmt.Println("  -h, --help             Print this help message")
 	fmt.Println("\nGame Rules Configuration:")
 	fmt.Println("  You can customize game parameters using a JSON file. Example:")

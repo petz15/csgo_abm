@@ -107,13 +107,25 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 		// Update statistics with the result
 		updateglobalstats(stats, result)
 
-		// Periodic garbage collection every 100 simulations
-		if (i+1)%100 == 0 {
+		// Periodic garbage collection every 10% of simulations if over 1000, otherwise every 100
+		var gcInterval int
+		if config.NumSimulations > 1000 {
+			gcInterval = config.NumSimulations / 10
+		} else {
+			gcInterval = 100
+		}
+		if (i+1)%gcInterval == 0 {
 			runtime.GC()
 		}
 
-		// Progress reporting for large runs
-		if config.NumSimulations > 100 && (i+1)%100 == 0 {
+		// Progress reporting every 10% of simulations if over 1000, otherwise every 100
+		var progressInterval int
+		if config.NumSimulations > 1000 {
+			progressInterval = config.NumSimulations / 10
+		} else {
+			progressInterval = 100
+		}
+		if config.NumSimulations > 100 && (i+1)%progressInterval == 0 {
 			fmt.Printf("Progress: %d/%d simulations completed\n", i+1, config.NumSimulations)
 		}
 	}

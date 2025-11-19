@@ -17,6 +17,7 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		OpponentScore:     opponent.GetScore(),
 		OwnScore:          team.GetScore(),
 		ConsecutiveLosses: team.GetConsecutiveloss(),
+		ConsecutiveWins:   team.GetConsecutivewins(),
 		Side:              team.GetSide(),
 		Equipment:         team.GetRSEquipment(),
 		IsOvertime:        isOvertime,
@@ -62,6 +63,8 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		return strategy.InvestDecisionMaking_ml_forest(ctx)
 	case "casual":
 		return strategy.InvestDecisionMaking_casual(ctx)
+	case "anti_all":
+		return strategy.InvestDecisionMaking_anti_allin(ctx)
 	default:
 		return strategy.InvestDecisionMaking_allin(ctx)
 	}

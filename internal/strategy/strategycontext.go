@@ -10,6 +10,7 @@ type StrategyContext_simple struct {
 	OpponentScore     int
 	OwnScore          int
 	ConsecutiveLosses int
+	ConsecutiveWins   int
 	Side              bool // true = CT, false = T
 	IsPistolRound     bool
 	IsLastRoundHalf   bool
