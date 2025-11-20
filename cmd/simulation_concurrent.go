@@ -204,12 +204,7 @@ func RunParallelSimulations(config SimulationConfig) error {
 		Exportpath:            config.Exportpath, // Use the export path from main config
 	})
 
-	// Initialize advanced analyzer if enabled
-	var advancedAnalyzer *analysis.AdvancedAnalyzer
-	if config.AdvancedAnalysis {
-		advancedAnalyzer = analysis.NewAdvancedAnalyzer()
-		fmt.Println("📊 Advanced economic analysis: ENABLED")
-	}
+	// Advanced analysis removed
 
 	fmt.Printf("Starting %d simulations with %d concurrent workers...\n",
 		config.NumSimulations, config.MaxConcurrent)
@@ -236,7 +231,7 @@ func RunParallelSimulations(config SimulationConfig) error {
 	resultsDone := make(chan bool)
 	go func() {
 		defer close(resultsDone)
-		collectResults(pool.results, stats, config.NumSimulations, advancedAnalyzer)
+		collectResults(pool.results, stats, config.NumSimulations)
 	}()
 
 	// Track memory usage
@@ -331,22 +326,7 @@ func RunParallelSimulations(config SimulationConfig) error {
 		fmt.Printf("Warning: Failed to export summary: %v\n", err)
 	}
 
-	// Finalize and export advanced analysis if enabled
-	if advancedAnalyzer != nil {
-		fmt.Println("\n📊 Finalizing advanced economic analysis...")
-		advancedAnalysis := advancedAnalyzer.Finalize()
-
-		// Export graphs and analysis
-		exporter := analysis.NewGraphExporter(advancedAnalysis, config.Exportpath)
-		if err := exporter.ExportAll(); err != nil {
-			fmt.Printf("Warning: Failed to export advanced analysis: %v\n", err)
-		} else {
-			fmt.Println("✅ Advanced analysis exported successfully")
-		}
-
-		// Print summary
-		analysis.PrintAnalysisSummary(advancedAnalysis)
-	}
+	// Advanced analysis removed
 
 	// Print final results
 	analysis.PrintEnhancedStats(stats)
@@ -360,7 +340,7 @@ func RunParallelSimulations(config SimulationConfig) error {
 
 	return nil
 } // collectResults processes simulation results and updates statistics
-func collectResults(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int, advancedAnalyzer *analysis.AdvancedAnalyzer) {
+func collectResults(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int) {
 	processedCount := int64(0)
 
 	for result := range results {
@@ -383,41 +363,6 @@ func collectResults(results <-chan SimulationResult, stats *analysis.SimulationS
 			0, // responseTime - not tracked in current implementation
 		)
 
-		// Update economic statistics
-		team1Econ := analysis.TeamGameEconomics{
-			TotalSpent:       result.Team1Economics.TotalSpent,
-			TotalEarned:      result.Team1Economics.TotalEarned,
-			AverageFunds:     result.Team1Economics.AverageFunds,
-			AverageRSEq:      result.Team1Economics.AverageRSEq,
-			AverageFTEEq:     result.Team1Economics.AverageFTEEq,
-			AverageREEq:      result.Team1Economics.AverageREEq,
-			AverageSurvivors: result.Team1Economics.AverageSurvivors,
-			MaxFunds:         result.Team1Economics.MaxFunds,
-			MinFunds:         result.Team1Economics.MinFunds,
-			MaxConsecLosses:  result.Team1Economics.MaxConsecLosses,
-		}
-		team2Econ := analysis.TeamGameEconomics{
-			TotalSpent:       result.Team2Economics.TotalSpent,
-			TotalEarned:      result.Team2Economics.TotalEarned,
-			AverageFunds:     result.Team2Economics.AverageFunds,
-			AverageRSEq:      result.Team2Economics.AverageRSEq,
-			AverageFTEEq:     result.Team2Economics.AverageFTEEq,
-			AverageREEq:      result.Team2Economics.AverageREEq,
-			AverageSurvivors: result.Team2Economics.AverageSurvivors,
-			MaxFunds:         result.Team2Economics.MaxFunds,
-			MinFunds:         result.Team2Economics.MinFunds,
-			MaxConsecLosses:  result.Team2Economics.MaxConsecLosses,
-		}
-		stats.UpdateEconomicStats(team1Econ, team2Econ, result.TotalRounds)
-
-		// Process game for advanced analysis if enabled
-		if advancedAnalyzer != nil && result.GameData != nil {
-			advancedAnalyzer.ProcessGame(result.GameData)
-
-			// Cleanup game data after processing
-			result.GameData.Cleanup()
-			result.GameData = nil
-		}
 	}
 }
 

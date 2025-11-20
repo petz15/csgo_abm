@@ -23,32 +23,6 @@ func updateglobalstats(stats *analysis.SimulationStats, result *GameResult) {
 		0, // responseTime - not tracked in sequential mode
 	)
 
-	// Convert and update economic statistics
-	team1Econ := analysis.TeamGameEconomics{
-		TotalSpent:       result.Team1Economics.TotalSpent,
-		TotalEarned:      result.Team1Economics.TotalEarned,
-		AverageFunds:     result.Team1Economics.AverageFunds,
-		AverageRSEq:      result.Team1Economics.AverageRSEq,
-		AverageFTEEq:     result.Team1Economics.AverageFTEEq,
-		AverageREEq:      result.Team1Economics.AverageREEq,
-		AverageSurvivors: result.Team1Economics.AverageSurvivors,
-		MaxFunds:         result.Team1Economics.MaxFunds,
-		MinFunds:         result.Team1Economics.MinFunds,
-		MaxConsecLosses:  result.Team1Economics.MaxConsecLosses,
-	}
-	team2Econ := analysis.TeamGameEconomics{
-		TotalSpent:       result.Team2Economics.TotalSpent,
-		TotalEarned:      result.Team2Economics.TotalEarned,
-		AverageFunds:     result.Team2Economics.AverageFunds,
-		AverageRSEq:      result.Team2Economics.AverageRSEq,
-		AverageFTEEq:     result.Team2Economics.AverageFTEEq,
-		AverageREEq:      result.Team2Economics.AverageREEq,
-		AverageSurvivors: result.Team2Economics.AverageSurvivors,
-		MaxFunds:         result.Team2Economics.MaxFunds,
-		MinFunds:         result.Team2Economics.MinFunds,
-		MaxConsecLosses:  result.Team2Economics.MaxConsecLosses,
-	}
-	stats.UpdateEconomicStats(team1Econ, team2Econ, result.TotalRounds)
 }
 
 func showstats(stats *analysis.SimulationStats) {
@@ -79,12 +53,7 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 	starttime := time.Now()
 	stats := analysis.NewStats(config.NumSimulations, "sequential")
 
-	// Initialize advanced analyzer if enabled
-	var advancedAnalyzer *analysis.AdvancedAnalyzer
-	if config.AdvancedAnalysis {
-		advancedAnalyzer = analysis.NewAdvancedAnalyzer()
-		fmt.Println("📊 Advanced economic analysis: ENABLED")
-	}
+	// Advanced analysis removed
 
 	// Display simulation mode and export information
 	if config.ExportDetailedResults {
@@ -114,14 +83,7 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 		// Update statistics with the result
 		updateglobalstats(stats, result)
 
-		// Process game for advanced analysis if enabled
-		if advancedAnalyzer != nil && result.GameData != nil {
-			advancedAnalyzer.ProcessGame(result.GameData)
-
-			// Cleanup game data after processing
-			result.GameData.Cleanup()
-			result.GameData = nil
-		}
+		// Advanced analysis removed
 
 		// Periodic garbage collection every 10% of simulations if over 1000, otherwise every 100
 		var gcInterval int
@@ -153,22 +115,7 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 	// Generate comprehensive final summary
 	showstats(stats)
 
-	// Finalize and export advanced analysis if enabled
-	if advancedAnalyzer != nil {
-		fmt.Println("\n📊 Finalizing advanced economic analysis...")
-		advancedAnalysis := advancedAnalyzer.Finalize()
-
-		// Export graphs and analysis
-		exporter := analysis.NewGraphExporter(advancedAnalysis, config.Exportpath)
-		if err := exporter.ExportAll(); err != nil {
-			fmt.Printf("Warning: Failed to export advanced analysis: %v\n", err)
-		} else {
-			fmt.Println("✅ Advanced analysis exported successfully")
-		}
-
-		// Print summary
-		analysis.PrintAnalysisSummary(advancedAnalysis)
-	}
+	// Advanced analysis removed
 
 	// Export summary statistics
 	if config.ExportDetailedResults {

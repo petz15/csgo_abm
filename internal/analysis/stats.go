@@ -25,22 +25,11 @@ type SimulationStats struct {
 	AverageRounds float64 `json:"average_rounds"`
 	OvertimeRate  float64 `json:"overtime_rate"`
 
-	// Economic statistics
-	Team1EconomicStats TeamEconomicStats `json:"team1_economic_stats"`
-	Team2EconomicStats TeamEconomicStats `json:"team2_economic_stats"`
-
 	// Performance metrics (optional for sequential)
 	ExecutionTime   time.Duration `json:"execution_time"`
 	ProcessingRate  float64       `json:"simulations_per_second,omitempty"`
 	PeakMemoryUsage uint64        `json:"peak_memory_usage_mb,omitempty"`
 	TotalGCRuns     uint32        `json:"total_gc_runs,omitempty"`
-
-	// Analysis data
-	ScoreDistribution map[string]int64 `json:"score_distribution"`
-	RoundDistribution map[int]int64    `json:"round_distribution"`
-
-	// Advanced analysis
-	AdvancedStats *AdvancedStats `json:"advanced_stats,omitempty"`
 
 	// Metadata
 	SimulationMode string            `json:"simulation_mode"` // "sequential" or "concurrent"
@@ -52,66 +41,11 @@ type SimulationStats struct {
 	RoundMutex sync.Mutex `json:"-"`
 }
 
-// AdvancedStats contains detailed statistical analysis
-type AdvancedStats struct {
-	// Win streak analysis
-	MaxWinStreak map[string]int     `json:"max_win_streaks"`
-	AvgWinStreak map[string]float64 `json:"avg_win_streaks"`
-
-	// Round analysis
-	MedianRounds float64 `json:"median_rounds"`
-	StdDevRounds float64 `json:"std_dev_rounds"`
-
-	// Score analysis
-	TopScoreLines []ScoreLine `json:"top_score_lines"`
-	BlowoutGames  int64       `json:"blowout_games"` // >10 round difference
-	CloseGames    int64       `json:"close_games"`   // <=3 round difference
-
-	// Game balance analysis
-	BalanceScore            float64 `json:"balance_score"`            // 0-100, higher = more balanced
-	StatisticalSignificance string  `json:"statistical_significance"` // "significant", "not_significant", "insufficient_data"
-	ChiSquareValue          float64 `json:"chi_square_value"`
-
-	// Performance analysis (for concurrent mode)
-	P50ResponseTime time.Duration   `json:"p50_response_time,omitempty"`
-	P95ResponseTime time.Duration   `json:"p95_response_time,omitempty"`
-	P99ResponseTime time.Duration   `json:"p99_response_time,omitempty"`
-	ResponseTimes   []time.Duration `json:"-"` // For percentile calculations
-}
-
 // ScoreLine represents a score with its frequency
 type ScoreLine struct {
 	Score     string  `json:"score"`
 	Count     int64   `json:"count"`
 	Frequency float64 `json:"frequency"`
-}
-
-// TeamEconomicStats contains aggregate economic statistics for a team across all simulations
-type TeamEconomicStats struct {
-	TotalSpent            float64 `json:"total_spent"`
-	AverageSpent          float64 `json:"average_spent_per_game"`
-	AverageSpentPerRound  float64 `json:"average_spent_per_round"`
-	TotalEarned           float64 `json:"total_earned"`
-	AverageEarned         float64 `json:"average_earned_per_game"`
-	AverageEarnedPerRound float64 `json:"average_earned_per_round"`
-	AverageFundsStart     float64 `json:"average_funds_at_round_start"` // Average funds at start of round
-	AverageRSEquipment    float64 `json:"average_rs_equipment"`         // Round start equipment
-	AverageFTEEquipment   float64 `json:"average_fte_equipment"`        // Full team equipment
-	AverageREEquipment    float64 `json:"average_re_equipment"`         // Round end equipment
-	AverageSurvivors      float64 `json:"average_survivors"`
-	MaxFunds              float64 `json:"max_funds"`
-	MinFunds              float64 `json:"min_funds"`
-	MaxConsecutiveLosses  int     `json:"max_consecutive_losses"`
-}
-
-// RoundStats contains round distribution statistics
-type RoundStats struct {
-	Min          int           `json:"min"`
-	Max          int           `json:"max"`
-	Median       float64       `json:"median"`
-	Mean         float64       `json:"mean"`
-	StdDev       float64       `json:"std_dev"`
-	Distribution map[int]int64 `json:"distribution"`
 }
 
 type SimulationConfig struct {
@@ -132,17 +66,9 @@ type SimulationConfig struct {
 // NewStats creates a new SimulationStats instance
 func NewStats(numSimulations int, mode string) *SimulationStats {
 	return &SimulationStats{
-		TotalSimulations:  int64(numSimulations),
-		ScoreDistribution: make(map[string]int64),
-		RoundDistribution: make(map[int]int64),
-		SimulationMode:    mode,
-		StartTime:         time.Now(),
-		AdvancedStats: &AdvancedStats{
-			MaxWinStreak:  make(map[string]int),
-			AvgWinStreak:  make(map[string]float64),
-			TopScoreLines: make([]ScoreLine, 0),
-			ResponseTimes: make([]time.Duration, 0),
-		},
+		TotalSimulations: int64(numSimulations),
+		SimulationMode:   mode,
+		StartTime:        time.Now(),
 	}
 }
 
