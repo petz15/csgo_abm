@@ -5,7 +5,6 @@
   "startingFunds": 800.0,
   "halfLength": 15,
   "otHalfLength": 3,
-  "maxFunds": 80000.0,
   "lossBonusCalc": true,
   "withSaves": false
 }
