@@ -79,6 +79,11 @@ func main() {
 				customOutputPath = args[i+1]
 				i++
 			}
+		case "--csv":
+			if i+1 < len(args) {
+				fmt.Sscanf(args[i+1], "%d", &config.CSVExportMode)
+				i++
+			}
 		case "-g", "--gamerules":
 			if i+1 < len(args) {
 				customGameRulesPath = args[i+1]
@@ -160,6 +165,7 @@ func main() {
 			"",
 			config.ExportDetailedResults,
 			config.ExportRounds,
+			config.CSVExportMode,
 			config.Exportpath,
 		)
 		if err != nil {
@@ -199,6 +205,7 @@ func printUsage() {
 	fmt.Println("  -e, --export           Export individual game results as JSON files (works with both modes)")
 	fmt.Println("  -r, --rounds           Export round-by-round data for each game (single simulation only)")
 	fmt.Println("  -a, --advanced         Enable advanced economic analysis with graphs (works with multiple simulations)")
+	fmt.Println("  --csv <mode>           CSV export mode: 0=none, 1=individual full, 2=combined full, 3=individual minimal, 4=combined minimal")
 	fmt.Println("  -o, --output <path>    Results output directory (default: results_YYYYMMDD_HHMMSS)")
 	fmt.Println("  -g, --gamerules <file> Path to JSON file with custom game rules (default: built-in defaults)")
 	fmt.Println("  -dist, --abmmodels <file> Path to ABM models JSON file (default: abm_models.json)")
@@ -269,6 +276,7 @@ type SimulationConfig struct {
 	ExportRounds          bool             `json:"export_rounds"`
 	Sequential            bool             `json:"sequential"`
 	AdvancedAnalysis      bool             `json:"advanced_analysis"`     // Enable advanced economic analysis
+	CSVExportMode         int              `json:"csv_export_mode"`       // 0=none, 1=individual full, 2=combined full, 3=individual minimal, 4=combined minimal
 	Exportpath            string           `json:"export_path,omitempty"` // Path for exporting results
 }
 

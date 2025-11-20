@@ -55,6 +55,12 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 
 	// Advanced analysis removed
 
+	// Storage for games if we need combined CSV export (modes 2 or 4)
+	var allGames []*engine.Game
+	if config.CSVExportMode == 2 || config.CSVExportMode == 4 {
+		allGames = make([]*engine.Game, 0, config.NumSimulations)
+	}
+
 	// Display simulation mode and export information
 	if config.ExportDetailedResults {
 		fmt.Printf("Sequential simulation with individual result export enabled\n")
@@ -66,6 +72,10 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 		fmt.Println("Sequential simulation with summary-only mode")
 	}
 
+	if config.CSVExportMode > 0 {
+		fmt.Printf("CSV export mode: %d\n", config.CSVExportMode)
+	}
+
 	fmt.Printf("Starting %d sequential simulations...\n", config.NumSimulations)
 
 	for i := 0; i < config.NumSimulations; i++ {
@@ -74,10 +84,17 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 
 		// Simulate a single game with pre-validated rules
 		result, err := StartGame_default(config.Team1Name, config.Team1Strategy, config.Team2Name,
-			config.Team2Strategy, gameRules, simPrefix, config.ExportDetailedResults, false, config.Exportpath)
+			config.Team2Strategy, gameRules, simPrefix, config.ExportDetailedResults, false, config.CSVExportMode, config.Exportpath)
 		if err != nil {
 			fmt.Printf("Simulation %d failed: %v\n", i+1, err)
 			continue
+		}
+
+		// Store game data for combined CSV export
+		if config.CSVExportMode == 2 || config.CSVExportMode == 4 {
+			if result.GameData != nil {
+				allGames = append(allGames, result.GameData)
+			}
 		}
 
 		// Update statistics with the result
@@ -111,6 +128,27 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 	// Calculate final execution time
 	endtime := time.Now()
 	stats.ExecutionTime = endtime.Sub(starttime)
+
+	// Export combined CSV if mode 2 or 4
+	if config.CSVExportMode == 2 && len(allGames) > 0 {
+		fmt.Println("\nExporting combined full CSV...")
+		csvPath := fmt.Sprintf("%s/all_games_full.csv", config.Exportpath)
+		err := util.ExportAllGamesAllDataCSV(allGames, csvPath)
+		if err != nil {
+			fmt.Printf("Warning: Error exporting combined full CSV: %v\n", err)
+		} else {
+			fmt.Printf("✅ Combined full CSV exported: %s\n", csvPath)
+		}
+	} else if config.CSVExportMode == 4 && len(allGames) > 0 {
+		fmt.Println("\nExporting combined minimal CSV...")
+		csvPath := fmt.Sprintf("%s/all_games_minimal.csv", config.Exportpath)
+		err := util.ExportAllGamesMinimalCSV(allGames, csvPath)
+		if err != nil {
+			fmt.Printf("Warning: Error exporting combined minimal CSV: %v\n", err)
+		} else {
+			fmt.Printf("✅ Combined minimal CSV exported: %s\n", csvPath)
+		}
+	}
 
 	// Generate comprehensive final summary
 	showstats(stats)

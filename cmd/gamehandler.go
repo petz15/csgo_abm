@@ -37,7 +37,7 @@ type TeamGameEconomics struct {
 
 // StartGameWithValidatedRules runs a simulation with pre-validated GameRules (optimized for batch processing)
 func StartGame_default(team1Name string, team1Strategy string, team2Name string, team2Strategy string,
-	gameRules engine.GameRules, simPrefix string, exportJSON bool, exportRounds bool, exportpath string) (*GameResult, error) {
+	gameRules engine.GameRules, simPrefix string, exportJSON bool, exportRounds bool, csvExportMode int, exportpath string) (*GameResult, error) {
 
 	ID := util.CreateGameID()
 	if simPrefix != "" {
@@ -78,25 +78,34 @@ func StartGame_default(team1Name string, team1Strategy string, team2Name string,
 		}
 	}
 
+	// CSV Export based on mode (1=individual full, 3=individual minimal)
+	if csvExportMode == 1 || csvExportMode == 3 {
+		resultsDir := exportpath
+		os.MkdirAll(resultsDir, 0755)
+		if csvExportMode == 1 {
+			csvPath := filepath.Join(resultsDir, ID+"_full.csv")
+			err := util.ExportGameAllDataCSV(game, csvPath)
+			if err != nil {
+				fmt.Printf("Warning: Error exporting full CSV for %s: %v\n", ID, err)
+			}
+		} else if csvExportMode == 3 {
+			csvPath := filepath.Join(resultsDir, ID+"_minimal.csv")
+			err := util.ExportGameMinimalCSV(game, csvPath)
+			if err != nil {
+				fmt.Printf("Warning: Error exporting minimal CSV for %s: %v\n", ID, err)
+			}
+		}
+	}
+
 	// Optionally export round-by-round data
 	if exportRounds {
 		resultsDir := exportpath
 		os.MkdirAll(resultsDir, 0755)
 
-		// Export CSV (most compact, ~10x smaller than JSON)
-		roundsPathCSV := filepath.Join(resultsDir, ID+"_rounds.csv")
-		fmt.Printf("📊 Exporting round data to CSV: %s\n", roundsPathCSV)
-		err := util.ExportRoundsToCSV(game, roundsPathCSV)
-		if err != nil {
-			fmt.Printf("Warning: Error exporting CSV rounds for %s: %v\n", ID, err)
-		} else {
-			fmt.Printf("✅ CSV round data exported successfully\n")
-		}
-
 		// Export simple JSON version (compact with key metrics only)
 		roundsPathSimple := filepath.Join(resultsDir, ID+"_rounds_simple.json")
 		fmt.Printf("📊 Exporting simplified JSON round data to: %s\n", roundsPathSimple)
-		err = util.ExportRoundsToJSONSimple(game, roundsPathSimple)
+		err := util.ExportRoundsToJSONSimple(game, roundsPathSimple)
 		if err != nil {
 			fmt.Printf("Warning: Error exporting simple rounds for %s: %v\n", ID, err)
 		} else {

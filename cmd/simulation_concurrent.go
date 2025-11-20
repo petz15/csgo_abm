@@ -4,6 +4,7 @@ import (
 	"context"
 	"csgo_abm/internal/analysis"
 	"csgo_abm/internal/engine"
+	"csgo_abm/util"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -143,6 +144,7 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 			simPrefix,
 			job.Config.ExportDetailedResults,
 			false,
+			job.Config.CSVExportMode,
 			job.Config.Exportpath,
 		)
 
@@ -204,6 +206,13 @@ func RunParallelSimulations(config SimulationConfig) error {
 		Exportpath:            config.Exportpath, // Use the export path from main config
 	})
 
+	// Storage for games if we need combined CSV export (modes 2 or 4)
+	var allGames []*engine.Game
+	var gamesMutex sync.Mutex
+	if config.CSVExportMode == 2 || config.CSVExportMode == 4 {
+		allGames = make([]*engine.Game, 0, config.NumSimulations)
+	}
+
 	// Advanced analysis removed
 
 	fmt.Printf("Starting %d simulations with %d concurrent workers...\n",
@@ -219,6 +228,10 @@ func RunParallelSimulations(config SimulationConfig) error {
 		fmt.Println("Individual result export: DISABLED (summary-only mode)")
 	}
 
+	if config.CSVExportMode > 0 {
+		fmt.Printf("CSV export mode: %d\n", config.CSVExportMode)
+	}
+
 	// Create worker pool
 	pool := NewWorkerPool(config.MaxConcurrent, stats)
 	pool.Start()
@@ -231,7 +244,11 @@ func RunParallelSimulations(config SimulationConfig) error {
 	resultsDone := make(chan bool)
 	go func() {
 		defer close(resultsDone)
-		collectResults(pool.results, stats, config.NumSimulations)
+		if config.CSVExportMode == 2 || config.CSVExportMode == 4 {
+			collectResultsWithGames(pool.results, stats, config.NumSimulations, &allGames, &gamesMutex)
+		} else {
+			collectResults(pool.results, stats, config.NumSimulations)
+		}
 	}()
 
 	// Track memory usage
@@ -326,6 +343,27 @@ func RunParallelSimulations(config SimulationConfig) error {
 		fmt.Printf("Warning: Failed to export summary: %v\n", err)
 	}
 
+	// Export combined CSV if mode 2 or 4
+	if config.CSVExportMode == 2 && len(allGames) > 0 {
+		fmt.Println("\nExporting combined full CSV...")
+		csvPath := filepath.Join(config.Exportpath, "all_games_full.csv")
+		err := util.ExportAllGamesAllDataCSV(allGames, csvPath)
+		if err != nil {
+			fmt.Printf("Warning: Error exporting combined full CSV: %v\n", err)
+		} else {
+			fmt.Printf("✅ Combined full CSV exported: %s\n", csvPath)
+		}
+	} else if config.CSVExportMode == 4 && len(allGames) > 0 {
+		fmt.Println("\nExporting combined minimal CSV...")
+		csvPath := filepath.Join(config.Exportpath, "all_games_minimal.csv")
+		err := util.ExportAllGamesMinimalCSV(allGames, csvPath)
+		if err != nil {
+			fmt.Printf("Warning: Error exporting combined minimal CSV: %v\n", err)
+		} else {
+			fmt.Printf("✅ Combined minimal CSV exported: %s\n", csvPath)
+		}
+	}
+
 	// Advanced analysis removed
 
 	// Print final results
@@ -363,6 +401,38 @@ func collectResults(results <-chan SimulationResult, stats *analysis.SimulationS
 			0, // responseTime - not tracked in current implementation
 		)
 
+	}
+}
+
+// collectResultsWithGames processes simulation results and stores games for CSV export
+func collectResultsWithGames(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int, allGames *[]*engine.Game, gamesMutex *sync.Mutex) {
+	processedCount := int64(0)
+
+	for result := range results {
+		atomic.AddInt64(&processedCount, 1)
+
+		if result.Error != nil {
+			fmt.Printf("Simulation %s failed: %v\n", result.GameID, result.Error)
+			stats.UpdateFailedSimulation()
+			continue
+		}
+
+		// Update statistics for successful simulations
+		stats.UpdateGameResult(
+			result.Team1Won,
+			result.Team1Score,
+			result.Team2Score,
+			result.TotalRounds,
+			result.WentToOvertime,
+			0,
+		)
+
+		// Store game data for combined CSV export
+		if result.GameData != nil {
+			gamesMutex.Lock()
+			*allGames = append(*allGames, result.GameData)
+			gamesMutex.Unlock()
+		}
 	}
 }
 
