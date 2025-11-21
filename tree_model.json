@@ -1,8 +1,17 @@
 {
   "model_type": "decision_tree",
   "tree": {
-    "is_leaf": true,
-    "value": 1.0
+    "is_leaf": false,
+    "feature": "own_funds",
+    "threshold": 0.002000001957640052,
+    "left": {
+      "is_leaf": true,
+      "value": 0.0
+    },
+    "right": {
+      "is_leaf": true,
+      "value": 1.0
+    }
   },
   "state_features": [
     "own_funds",

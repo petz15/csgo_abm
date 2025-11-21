@@ -37,8 +37,8 @@ func printGameAnalysis(stats *SimulationStats) {
 	fmt.Println(strings.Repeat("-", 40))
 
 	// Team performance
-	fmt.Printf("Team 1 Wins: %d (%.1f%%)\n", stats.Team1Wins, stats.Team1WinRate)
-	fmt.Printf("Team 2 Wins: %d (%.1f%%)\n", stats.Team2Wins, stats.Team2WinRate)
+	fmt.Printf("Team 1 Wins: %d (%.1f%%) with strat (%s)\n", stats.Team1Wins, stats.Team1WinRate, stats.Config.Team1Strategy)
+	fmt.Printf("Team 2 Wins: %d (%.1f%%) with strat (%s)\n", stats.Team2Wins, stats.Team2WinRate, stats.Config.Team2Strategy)
 
 	// Game characteristics
 	fmt.Printf("Average Rounds per Game: %.1f\n", stats.AverageRounds)

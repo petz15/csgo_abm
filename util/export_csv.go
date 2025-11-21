@@ -360,6 +360,8 @@ func ExportGameMinimalCSV(game *engine.Game, path string) error {
 			fmt.Sprintf("%t", round.IsT1WinnerTeam),
 			fmt.Sprintf("%t", round.IsT1CT),
 			fmt.Sprintf("%t", game.OT),
+			fmt.Sprintf("%d", round.Calc_Outcome.ReasonCode),
+			fmt.Sprintf("%t", round.Calc_Outcome.BombPlanted),
 			fmt.Sprintf("%d", t1.Score_Start),
 			fmt.Sprintf("%d", t1.Score_End),
 			fmt.Sprintf("%.2f", t1.Spent),
@@ -410,6 +412,8 @@ func ExportAllGamesMinimalCSV(games []*engine.Game, path string) error {
 		"is_t1_winner",
 		"is_t1_ct",
 		"is_ot",
+		"outcome_reason_code",
+		"outcome_bomb_planted",
 		"t1_score_start",
 		"t1_score_end",
 		"t1_spent",
@@ -434,6 +438,7 @@ func ExportAllGamesMinimalCSV(games []*engine.Game, path string) error {
 		"t2_consecutive_losses",
 		"t2_consecutive_wins",
 		"t2_loss_bonus_level",
+		"game_id",
 	}
 	writer.Write(headers)
 
@@ -447,6 +452,8 @@ func ExportAllGamesMinimalCSV(games []*engine.Game, path string) error {
 				fmt.Sprintf("%t", round.IsT1WinnerTeam),
 				fmt.Sprintf("%t", round.IsT1CT),
 				fmt.Sprintf("%t", game.OT),
+				fmt.Sprintf("%d", round.Calc_Outcome.ReasonCode),
+				fmt.Sprintf("%t", round.Calc_Outcome.BombPlanted),
 				fmt.Sprintf("%d", t1.Score_Start),
 				fmt.Sprintf("%d", t1.Score_End),
 				fmt.Sprintf("%.2f", t1.Spent),
@@ -471,6 +478,7 @@ func ExportAllGamesMinimalCSV(games []*engine.Game, path string) error {
 				fmt.Sprintf("%d", t2.Consecutiveloss),
 				fmt.Sprintf("%d", t2.Consecutivewins),
 				fmt.Sprintf("%d", t2.LossBonusLevel),
+				game.ID,
 			}
 			writer.Write(row)
 		}

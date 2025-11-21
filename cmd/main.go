@@ -23,7 +23,7 @@ func main() {
 		Team1Name:             "Team A",
 		Team1Strategy:         "all_in",
 		Team2Name:             "Team B",
-		Team2Strategy:         "default_half",
+		Team2Strategy:         "anti_allin",
 		Sequential:            false, // Default to parallel simulations
 		ExportDetailedResults: false, // Default to not export individual results
 		ExportRounds:          false, // Default to not export round-by-round data
@@ -292,7 +292,7 @@ func (c *SimulationConfig) Validate() error {
 		c.Team1Strategy = "all_in"
 	}
 	if c.Team2Strategy == "" {
-		c.Team2Strategy = "default_half"
+		c.Team2Strategy = "anti_allin"
 	}
 	return nil
 }

@@ -64,9 +64,9 @@ type SimulationConfig struct {
 }
 
 // NewStats creates a new SimulationStats instance
-func NewStats(numSimulations int, mode string) *SimulationStats {
+func NewStats(NumSimulations int, mode string) *SimulationStats {
 	return &SimulationStats{
-		TotalSimulations: int64(numSimulations),
+		TotalSimulations: int64(NumSimulations),
 		SimulationMode:   mode,
 		StartTime:        time.Now(),
 	}
