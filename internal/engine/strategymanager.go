@@ -66,6 +66,8 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		return strategy.InvestDecisionMaking_casual(ctx)
 	case "anti_all":
 		return strategy.InvestDecisionMaking_anti_allin(ctx)
+	case "anti_all_v2":
+		return strategy.InvestDecisionMaking_anti_allin_v2(ctx)
 	default:
 		return strategy.InvestDecisionMaking_allin(ctx)
 	}

@@ -151,13 +151,13 @@ func (t *Team) GetConsecutivewins() int {
 	return RD.Consecutivewins
 }
 
-func (t *Team) SetCurrentLossBonusLevel(value int) {
+func (t *Team) SetCurrentLossBonusLevel(value int, maxValue int) {
 	RD := &t.RoundData[len(t.RoundData)-1]
 	if value < 0 {
 		value = 0
 	}
-	if value > 4 {
-		value = 4
+	if value > maxValue {
+		value = maxValue
 	}
 	RD.LossBonusLevel = value
 }

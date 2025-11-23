@@ -10,7 +10,7 @@ type Round struct {
 	Sideswitch     bool       // True if sideswitch has occurred
 	gameRules      *GameRules `json:"-"` // Don't export game rules
 	OT             bool       // True if this is an overtime round
-	game           *Game
+	game           *Game      `json:"-"` // Don't export game rules
 }
 
 func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules, ot bool, g *Game) *Round {
@@ -56,24 +56,26 @@ func (r *Round) RoundEnd(Team1 *Team, Team2 *Team) {
 func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
 	// Determine funds earned based on round outcome
 	// https://counterstrike.fandom.com/wiki/Money -> be sure to check CSGO values
+	// https://www.rockpapershotgun.com/csgo-economy-guide
 	winnerFunds := 0.0
 	loserFunds := 0.0
 
 	switch r.Calc_Outcome.ReasonCode {
 	case 1:
-		winnerFunds += 3500 * 5 //bomb exploded
-		winnerFunds += 300      //plant bonus
+		winnerFunds += r.gameRules.RoundOutcomeReward[0] * 5
+		winnerFunds += r.gameRules.BombplantReward //plant bonus
 	case 2:
-		winnerFunds += 3250 * 5
+		winnerFunds += r.gameRules.RoundOutcomeReward[1] * 5
 		if r.Calc_Outcome.BombPlanted { //plant bonus
-			winnerFunds += 300
+			winnerFunds += r.gameRules.BombplantReward
 		}
 	case 3:
-		winnerFunds += 3500 * 5
-		winnerFunds += 300            //defuse bonus
-		loserFunds += (800 * 5) + 300 //bomb planted bonus
+		winnerFunds += r.gameRules.RoundOutcomeReward[2] * 5
+		winnerFunds += r.gameRules.BombdefuseReward      //defuse bonus
+		loserFunds += r.gameRules.BombplantRewardall * 5 //plant bonus for all T players
+		loserFunds += r.gameRules.BombplantReward        //defuse bonus for all T players
 	case 4:
-		winnerFunds += 3250 * 5
+		winnerFunds += r.gameRules.RoundOutcomeReward[3] * 5
 	}
 
 	var ctteam *Team
@@ -105,29 +107,33 @@ func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
 		lossbonus = r.LossBonusCalculation(ctteam)
 	}
 
+	maxLossLevel := len(r.gameRules.LossBonus) - 1
+	// Update loss bonus levels
+
 	if r.gameRules.LossBonusCalc {
+
 		if r.Calc_Outcome.CTWins {
-			tteam.SetCurrentLossBonusLevel(tteam.GetCurrentLossBonusLevel() + 1)
-			ctteam.SetCurrentLossBonusLevel(ctteam.GetCurrentLossBonusLevel() - 1)
+			tteam.SetCurrentLossBonusLevel(tteam.GetCurrentLossBonusLevel()+1, maxLossLevel)
+			ctteam.SetCurrentLossBonusLevel(ctteam.GetCurrentLossBonusLevel()-1, maxLossLevel)
 		} else {
-			ctteam.SetCurrentLossBonusLevel(ctteam.GetCurrentLossBonusLevel() + 1)
-			tteam.SetCurrentLossBonusLevel(tteam.GetCurrentLossBonusLevel() - 1)
+			ctteam.SetCurrentLossBonusLevel(ctteam.GetCurrentLossBonusLevel()+1, maxLossLevel)
+			tteam.SetCurrentLossBonusLevel(tteam.GetCurrentLossBonusLevel()-1, maxLossLevel)
 		}
 	} else {
 		if r.Calc_Outcome.CTWins {
-			tteam.SetCurrentLossBonusLevel(tteam.GetCurrentLossBonusLevel() + 1)
-			ctteam.SetCurrentLossBonusLevel(0)
+			tteam.SetCurrentLossBonusLevel(tteam.GetCurrentLossBonusLevel()+1, maxLossLevel)
+			ctteam.SetCurrentLossBonusLevel(0, maxLossLevel)
 		} else {
-			ctteam.SetCurrentLossBonusLevel(ctteam.GetCurrentLossBonusLevel() + 1)
-			tteam.SetCurrentLossBonusLevel(0)
+			ctteam.SetCurrentLossBonusLevel(ctteam.GetCurrentLossBonusLevel()+1, maxLossLevel)
+			tteam.SetCurrentLossBonusLevel(0, maxLossLevel)
 		}
 	}
 
 	// Kills and loss bonus
 
 	if r.Calc_Outcome.CTWins {
-		loserFunds += float64((5 - (r.Calc_Outcome.CTSurvivors)) * 300)
-		winnerFunds += float64((5 - (r.Calc_Outcome.TSurvivors)) * 300)
+		loserFunds += float64((5 - (r.Calc_Outcome.CTSurvivors))) * (r.gameRules.EliminationReward + (r.gameRules.AdditionalReward_T_Elimination * 5))
+		winnerFunds += float64((5 - (r.Calc_Outcome.TSurvivors))) * (r.gameRules.EliminationReward + (r.gameRules.AdditionalReward_CT_Elimination * 5))
 
 		// Add loss bonus to losing team
 		// Reduction for surviving T players if round end reason is 4
@@ -137,8 +143,8 @@ func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
 		}
 		loserFunds += float64(lossbonus) * float64(5-reduction)
 	} else {
-		loserFunds += float64((5 - (r.Calc_Outcome.TSurvivors)) * 300)
-		winnerFunds += float64((5 - (r.Calc_Outcome.CTSurvivors)) * 300)
+		loserFunds += float64((5 - (r.Calc_Outcome.TSurvivors))) * (r.gameRules.EliminationReward + (r.gameRules.AdditionalReward_CT_Elimination * 5))
+		winnerFunds += float64((5 - (r.Calc_Outcome.CTSurvivors))) * (r.gameRules.EliminationReward + (r.gameRules.AdditionalReward_T_Elimination * 5))
 
 		// Add loss bonus to losing team
 		loserFunds += float64(lossbonus) * 5
@@ -168,16 +174,10 @@ func (r *Round) LossBonusCalculation(loserteam *Team) int {
 
 	lossBonus := 0
 	lossbonuslevel := loserteam.GetCurrentLossBonusLevel()
-	if lossbonuslevel >= 4 {
-		lossBonus = 3400 //Loss bonus for 5th loss and beyond
-	} else if lossbonuslevel == 3 {
-		lossBonus = 2900 // Loss bonus for fourth loss
-	} else if lossbonuslevel == 2 {
-		lossBonus = 2400 // Loss bonus for third loss
-	} else if lossbonuslevel == 1 {
-		lossBonus = 1900 // Loss bonus for second loss
+	if lossbonuslevel < len(r.gameRules.LossBonus) {
+		lossBonus = int(r.gameRules.LossBonus[lossbonuslevel])
 	} else {
-		lossBonus = 1400 // Loss bonus for first loss
+		lossBonus = int(r.gameRules.LossBonus[len(r.gameRules.LossBonus)-1])
 	}
 	return lossBonus
 }
