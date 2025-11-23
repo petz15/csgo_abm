@@ -158,6 +158,7 @@ func sampleRoundEndReason(side string, oc *RoundOutcome, rng *rand.Rand) {
 	for _, entry := range thresholds {
 		if randValue <= entry.Threshold {
 			oc.ReasonCode = entry.Reason
+			break
 		}
 	}
 
@@ -220,6 +221,7 @@ func sampleSurvivors(side string, oc *RoundOutcome, rng *rand.Rand) int {
 	for _, entry := range thresholds {
 		if randValue <= entry.Threshold {
 			survivors = entry.Value
+			break
 		}
 	}
 
