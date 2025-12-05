@@ -24,17 +24,30 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		IsPistolRound:     isPistolRound(curround, gameR.HalfLength),
 		IsAfterPistol:     isAfterPistol(curround, gameR.HalfLength, team.GetScore(), opponent.GetScore()),
 		IsLastRoundHalf:   isLastRoundHalf(curround, gameR.HalfLength),
-		HalfLength:        gameR.HalfLength,
-		OTHalfLength:      gameR.OTHalfLength,
 		OwnSurvivors:      team.GetpreviousSurvivors(),
 		EnemySurvivors:    opponent.GetpreviousSurvivors(),
 		RoundEndReason:    g.GetPreviousRoundEndReason(),
 		Is_BombPlanted:    g.GetPreviousBombPlant(),
-		Max_Funds:         gameR.MaxFunds,
-		DefaultEquipment:  gameR.DefaultEquipment,
-		OTFunds:           gameR.OTFunds,
-		OTEquipment:       gameR.OTEquipment,
-		WithSaves:         gameR.WithSaves,
+		RNG:               g.rng,
+		GameRules_strategy: strategy.GameRules_strategymanager{
+			DefaultEquipment:                gameR.DefaultEquipment,
+			OTFunds:                         gameR.OTFunds,
+			OTEquipment:                     gameR.OTEquipment,
+			StartingFunds:                   gameR.StartingFunds,
+			HalfLength:                      gameR.HalfLength,
+			OTHalfLength:                    gameR.OTHalfLength,
+			MaxFunds:                        gameR.MaxFunds,
+			LossBonusCalc:                   gameR.LossBonusCalc,
+			WithSaves:                       gameR.WithSaves,
+			LossBonus:                       gameR.LossBonus,
+			RoundOutcomeReward:              gameR.RoundOutcomeReward,
+			EliminationReward:               gameR.EliminationReward,
+			BombplantRewardall:              gameR.BombplantRewardall,
+			BombplantReward:                 gameR.BombplantReward,
+			BombdefuseReward:                gameR.BombdefuseReward,
+			AdditionalReward_CT_Elimination: gameR.AdditionalReward_CT_Elimination,
+			AdditionalReward_T_Elimination:  gameR.AdditionalReward_T_Elimination,
+		},
 	}
 
 	switch team.Strategy {
@@ -68,6 +81,10 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		return strategy.InvestDecisionMaking_anti_allin(ctx)
 	case "anti_all_v2":
 		return strategy.InvestDecisionMaking_anti_allin_v2(ctx)
+	case "min_max":
+		return strategy.InvestDecisionMaking_min_max(ctx)
+	case "min_max_v2":
+		return strategy.InvestDecisionMaking_min_max_v2(ctx)
 	default:
 		return strategy.InvestDecisionMaking_allin(ctx)
 	}

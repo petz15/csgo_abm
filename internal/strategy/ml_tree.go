@@ -78,7 +78,7 @@ func (m *TreeModel) prepareInput(ctx StrategyContext_simple) map[string]float64 
 	}
 
 	features["round_number"] = float64(ctx.CurrentRound) / m.Normalization["round_number"]
-	features["half_length"] = float64(ctx.HalfLength) / m.Normalization["half_length"]
+	features["half_length"] = float64(ctx.GameRules_strategy.HalfLength) / m.Normalization["half_length"]
 	features["last_round_reason"] = float64(ctx.RoundEndReason) / m.Normalization["last_round_reason"]
 
 	// last_bomb_planted: 1.0 if planted, 0.0 otherwise

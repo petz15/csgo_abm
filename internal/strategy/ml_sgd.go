@@ -98,7 +98,7 @@ func (m *SGDModel) prepareInput(ctx StrategyContext_simple) []float64 {
 	}
 
 	input[7] = float64(ctx.CurrentRound) / m.Normalization["round_number"]
-	input[8] = float64(ctx.HalfLength) / m.Normalization["half_length"]
+	input[8] = float64(ctx.GameRules_strategy.HalfLength) / m.Normalization["half_length"]
 	input[9] = float64(ctx.RoundEndReason) / m.Normalization["last_round_reason"]
 
 	// last_bomb_planted: 1.0 if planted, 0.0 otherwise

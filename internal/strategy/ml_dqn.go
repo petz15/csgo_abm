@@ -45,7 +45,7 @@ func InvestDecisionMaking_ml_dqn(ctx StrategyContext_simple) float64 {
 		ConsecutiveLosses: ctx.ConsecutiveLosses,
 		IsCTSide:          ctx.Side,
 		RoundNumber:       ctx.CurrentRound,
-		HalfLength:        ctx.HalfLength,
+		HalfLength:        ctx.GameRules_strategy.HalfLength,
 		LastRoundReason:   ctx.RoundEndReason,
 		LastBombPlanted:   ctx.Is_BombPlanted,
 	}

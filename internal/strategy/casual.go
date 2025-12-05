@@ -11,13 +11,13 @@ func InvestDecisionMaking_casual(ctx StrategyContext_simple) float64 {
 		return ctx.Funds
 	} else if ctx.IsPistolRound {
 		return ctx.Funds
-	} else if ctx.HalfLength-ctx.OpponentScore == 1 && !ctx.IsOvertime {
+	} else if ctx.GameRules_strategy.HalfLength-ctx.OpponentScore == 1 && !ctx.IsOvertime {
 		return ctx.Funds * 0.8
-	} else if ctx.HalfLength-ctx.OpponentScore == 0 && !ctx.IsOvertime {
+	} else if ctx.GameRules_strategy.HalfLength-ctx.OpponentScore == 0 && !ctx.IsOvertime {
 		return ctx.Funds
-	} else if ctx.HalfLength-ctx.OwnScore == 1 && !ctx.IsOvertime {
+	} else if ctx.GameRules_strategy.HalfLength-ctx.OwnScore == 1 && !ctx.IsOvertime {
 		return ctx.Funds * 0.8
-	} else if ctx.HalfLength-ctx.OwnScore == 0 && !ctx.IsOvertime {
+	} else if ctx.GameRules_strategy.HalfLength-ctx.OwnScore == 0 && !ctx.IsOvertime {
 		return ctx.Funds
 	}
 
