@@ -13,10 +13,12 @@ type StrategyContext_simple struct {
 	OwnScore           int
 	ConsecutiveLosses  int
 	ConsecutiveWins    int
+	LossBonusLevel     int  // Current loss bonus level
 	Side               bool // true = CT, false = T
 	IsPistolRound      bool
 	IsLastRoundHalf    bool
 	IsOvertime         bool
+	OvertimeAmount     int // Number of overtime periods played
 	IsAfterPistol      bool
 	OwnSurvivors       int  // Number of survivors in the previous RoundEndReason
 	EnemySurvivors     int  // Number of enemy survivors in the previous RoundEndReason
@@ -58,4 +60,16 @@ func relu(x float64) float64 {
 		return x
 	}
 	return 0
+}
+
+func avgArray(arr []float64) float64 {
+	if len(arr) == 0 {
+		return 0
+	} else {
+		sum := 0.0
+		for _, v := range arr {
+			sum += v
+		}
+		return sum / float64(len(arr))
+	}
 }

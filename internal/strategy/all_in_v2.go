@@ -1,8 +1,6 @@
 package strategy
 
 func InvestDecisionMaking_allin_v2(ctx StrategyContext_simple) float64 {
-	// Implement your decision-making logic here
-	// This is a placeholder implementation
 
 	if ctx.IsLastRoundHalf {
 		return ctx.Funds

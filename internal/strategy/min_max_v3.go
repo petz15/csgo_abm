@@ -1,24 +1,26 @@
 package strategy
 
 func InvestDecisionMaking_min_max_v3(ctx StrategyContext_simple) float64 {
-	// min_max_v2, spends all, in the first and last round. otherwise it's a 50-50 chance to spend all or nothing
 
-	if !ctx.IsOvertime {
-		if ctx.CurrentRound == 1 || ctx.CurrentRound == ctx.GameRules_strategy.HalfLength+1 {
-			return ctx.Funds
-		} else if ctx.CurrentRound == ctx.GameRules_strategy.HalfLength || ctx.CurrentRound == ctx.GameRules_strategy.HalfLength*2 {
-			return ctx.Funds
-		}
-	} else {
-		curR := ctx.CurrentRound - ctx.GameRules_strategy.HalfLength*2
-		if curR%ctx.GameRules_strategy.OTHalfLength == 1 || curR%ctx.GameRules_strategy.OTHalfLength == 0 {
-			return ctx.Funds
-		}
-	}
+	Score_to_Win := ctx.GameRules_strategy.HalfLength + (ctx.GameRules_strategy.OTHalfLength * (ctx.OvertimeAmount)) + 1
 
-	if ctx.RNG.Float64() < 0.5 {
+	// min_max_v3, invests all in the beginning and end of halves/overtime. In between it tries to build up wealth
+	//when losing until max loss bonus has been reached or funds are larger than average winner funds
+
+	if Score_to_Win-ctx.OpponentScore == 1 || Score_to_Win-ctx.OwnScore == 1 {
 		return ctx.Funds
-	} else {
-		return 0
 	}
+
+	if ctx.IsPistolRound {
+		return ctx.Funds
+	} else if ctx.IsLastRoundHalf {
+		return ctx.Funds
+	}
+
+	if ctx.ConsecutiveLosses < len(ctx.GameRules_strategy.LossBonus) {
+		return 0.0
+	}
+
+	return ctx.Funds
+
 }

@@ -61,20 +61,20 @@ func (r *Round) determineFundsEarned(Team1 *Team, Team2 *Team) {
 	loserFunds := 0.0
 
 	switch r.Calc_Outcome.ReasonCode {
-	case 1:
+	case 1: //T win by bomb explosion
 		winnerFunds += r.gameRules.RoundOutcomeReward[0] * 5
 		winnerFunds += r.gameRules.BombplantReward //plant bonus
-	case 2:
+	case 2: //T win by elimination
 		winnerFunds += r.gameRules.RoundOutcomeReward[1] * 5
 		if r.Calc_Outcome.BombPlanted { //plant bonus
 			winnerFunds += r.gameRules.BombplantReward
 		}
-	case 3:
+	case 3: //CT win by defuse
 		winnerFunds += r.gameRules.RoundOutcomeReward[2] * 5
 		winnerFunds += r.gameRules.BombdefuseReward      //defuse bonus
 		loserFunds += r.gameRules.BombplantRewardall * 5 //plant bonus for all T players
 		loserFunds += r.gameRules.BombplantReward        //defuse bonus for all T players
-	case 4:
+	case 4: //CT win by elimination
 		winnerFunds += r.gameRules.RoundOutcomeReward[3] * 5
 	}
 

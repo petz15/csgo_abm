@@ -8,39 +8,43 @@ type Team struct {
 }
 
 type Team_RoundData struct {
-	is_Side_CT      bool    // true for CT, false for T
-	Funds           float64 // Total funds available for the team at the start of the round
-	Funds_start     float64 // Funds at the start of the round
-	Earned          float64 // Total funds earned by the team at the conclusion of the round
-	RS_Eq_value     float64 // Round start equipment value
-	FTE_Eq_value    float64 // Freeze time end equipment value (after buy phase)
-	RE_Eq_value     float64 // Round end equipment value
-	Survivors       int     // Number of surviving players at the end of the round
-	Score_Start     int
-	Score_End       int     //updated at the end of the round
-	Consecutiveloss int     // Consecutive losses for the team, updated at the end of the round
-	Consecutivewins int     // Consecutive wins for the team, updated at the end of the round
-	LossBonusLevel  int     // Level of loss bonus calculated at the end of the round
-	Spent           float64 // Total funds spent by the team during buy time
+	is_Side_CT            bool    // true for CT, false for T
+	Funds                 float64 // Total funds available for the team at the start of the round
+	Funds_start           float64 // Funds at the start of the round
+	Earned                float64 // Total funds earned by the team at the conclusion of the round
+	RS_Eq_value           float64 // Round start equipment value
+	FTE_Eq_value          float64 // Freeze time end equipment value (after buy phase)
+	RE_Eq_value           float64 // Round end equipment value
+	Survivors             int     // Number of surviving players at the end of the round
+	Score_Start           int
+	Score_End             int     //updated at the end of the round
+	Consecutiveloss       int     // Consecutive losses for the team, updated at the end of the round
+	Consecutivewins       int     // Consecutive wins for the team, updated at the end of the round
+	Consecutivewins_start int     // Consecutive wins at the start of the round
+	Consecutiveloss_start int     // Consecutive losses at the start of the round
+	LossBonusLevel        int     // Level of loss bonus calculated at the end of the round
+	Spent                 float64 // Total funds spent by the team during buy time
 }
 
 func NewTeam(name string, startingfunds float64, side bool, defaultequipment float64, strategy string) *Team {
 
 	new_RD := Team_RoundData{
-		is_Side_CT:      side,
-		Funds:           5 * startingfunds, // Starting funds
-		Funds_start:     5 * startingfunds, // Funds at the start of the round
-		Earned:          0,
-		RS_Eq_value:     5 * defaultequipment,
-		FTE_Eq_value:    0,
-		RE_Eq_value:     0,
-		Survivors:       0,
-		Score_Start:     0,
-		Score_End:       0,
-		Consecutiveloss: 0,
-		Consecutivewins: 0,
-		LossBonusLevel:  1,
-		Spent:           0,
+		is_Side_CT:            side,
+		Funds:                 5 * startingfunds, // Starting funds
+		Funds_start:           5 * startingfunds, // Funds at the start of the round
+		Earned:                0,
+		RS_Eq_value:           5 * defaultequipment,
+		FTE_Eq_value:          0,
+		RE_Eq_value:           0,
+		Survivors:             0,
+		Score_Start:           0,
+		Score_End:             0,
+		Consecutiveloss:       0,
+		Consecutivewins:       0,
+		Consecutivewins_start: 0,
+		Consecutiveloss_start: 0,
+		LossBonusLevel:        1,
+		Spent:                 0,
 	}
 
 	return &Team{
@@ -54,20 +58,22 @@ func (t *Team) NewRound(defaultequipment float64) {
 	// Create a new round data entry for the team
 	previousRound := t.RoundData[len(t.RoundData)-1]
 	newRoundData := Team_RoundData{
-		is_Side_CT:      previousRound.is_Side_CT,
-		Funds:           previousRound.Funds,
-		Funds_start:     previousRound.Funds,
-		Earned:          0,
-		RS_Eq_value:     previousRound.RE_Eq_value + (float64(5-previousRound.Survivors) * defaultequipment),
-		FTE_Eq_value:    0,
-		RE_Eq_value:     0,
-		Survivors:       0,
-		Score_Start:     previousRound.Score_End,
-		Score_End:       previousRound.Score_End,
-		Consecutiveloss: previousRound.Consecutiveloss,
-		Consecutivewins: previousRound.Consecutivewins,
-		LossBonusLevel:  previousRound.LossBonusLevel,
-		Spent:           0,
+		is_Side_CT:            previousRound.is_Side_CT,
+		Funds:                 previousRound.Funds,
+		Funds_start:           previousRound.Funds,
+		Earned:                0,
+		RS_Eq_value:           previousRound.RE_Eq_value + (float64(5-previousRound.Survivors) * defaultequipment),
+		FTE_Eq_value:          0,
+		RE_Eq_value:           0,
+		Survivors:             0,
+		Score_Start:           previousRound.Score_End,
+		Score_End:             previousRound.Score_End,
+		Consecutiveloss:       previousRound.Consecutiveloss,
+		Consecutivewins:       previousRound.Consecutivewins,
+		Consecutivewins_start: previousRound.Consecutivewins,
+		Consecutiveloss_start: previousRound.Consecutiveloss,
+		LossBonusLevel:        previousRound.LossBonusLevel,
+		Spent:                 0,
 	}
 	t.RoundData = append(t.RoundData, newRoundData)
 }
@@ -89,6 +95,13 @@ func (t *Team) NewOT(OTfunds float64, OTEquipment float64) {
 	t.RoundData[len(t.RoundData)-1].RS_Eq_value = 5 * OTEquipment // Reset equipment for overtime
 	t.RoundData[len(t.RoundData)-1].Funds = 5 * OTfunds           // Reset funds for overtime
 	t.RoundData[len(t.RoundData)-1].Funds_start = 5 * OTfunds
+
+	t.RoundData[len(t.RoundData)-1].Consecutiveloss = 0
+	t.RoundData[len(t.RoundData)-1].Consecutivewins = 0
+	t.RoundData[len(t.RoundData)-1].Consecutivewins_start = 0
+	t.RoundData[len(t.RoundData)-1].Consecutiveloss_start = 0
+	t.RoundData[len(t.RoundData)-1].LossBonusLevel = 1
+
 }
 
 func (t *Team) Sideswitch(OT bool, startingfunds float64, defaultEquipment float64, OTfunds float64, OTEquipment float64) {
@@ -99,6 +112,12 @@ func (t *Team) Sideswitch(OT bool, startingfunds float64, defaultEquipment float
 		t.RoundData[len(t.RoundData)-1].Funds = 5 * startingfunds // Reset funds for new half
 		t.RoundData[len(t.RoundData)-1].Funds_start = 5 * startingfunds
 		t.RoundData[len(t.RoundData)-1].RS_Eq_value = 5 * defaultEquipment // Reset equipment for new half
+
+		t.RoundData[len(t.RoundData)-1].Consecutiveloss = 0
+		t.RoundData[len(t.RoundData)-1].Consecutivewins = 0
+		t.RoundData[len(t.RoundData)-1].Consecutivewins_start = 0
+		t.RoundData[len(t.RoundData)-1].Consecutiveloss_start = 0
+		t.RoundData[len(t.RoundData)-1].LossBonusLevel = 1
 	}
 }
 

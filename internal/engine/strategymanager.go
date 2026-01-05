@@ -18,12 +18,14 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		OwnScore:          team.GetScore(),
 		ConsecutiveLosses: team.GetConsecutiveloss(),
 		ConsecutiveWins:   team.GetConsecutivewins(),
+		LossBonusLevel:    team.GetCurrentLossBonusLevel(),
 		Side:              team.GetSide(),
 		Equipment:         team.GetRSEquipment(),
 		IsOvertime:        isOvertime,
-		IsPistolRound:     isPistolRound(curround, gameR.HalfLength),
-		IsAfterPistol:     isAfterPistol(curround, gameR.HalfLength, team.GetScore(), opponent.GetScore()),
-		IsLastRoundHalf:   isLastRoundHalf(curround, gameR.HalfLength),
+		OvertimeAmount:    g.OTcounter,
+		IsPistolRound:     isPistolRound(curround, gameR.HalfLength, isOvertime, gameR.OTHalfLength),
+		IsAfterPistol:     isAfterPistol(curround, gameR.HalfLength, team.GetScore(), opponent.GetScore(), isOvertime, gameR.OTHalfLength),
+		IsLastRoundHalf:   isLastRoundHalf(curround, gameR.HalfLength, isOvertime, gameR.OTHalfLength),
 		OwnSurvivors:      team.GetpreviousSurvivors(),
 		EnemySurvivors:    opponent.GetpreviousSurvivors(),
 		RoundEndReason:    g.GetPreviousRoundEndReason(),
@@ -81,10 +83,16 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		return strategy.InvestDecisionMaking_anti_allin(ctx)
 	case "anti_all_v2":
 		return strategy.InvestDecisionMaking_anti_allin_v2(ctx)
+	case "anti_all_v3":
+		return strategy.InvestDecisionMaking_anti_allin_v3(ctx)
 	case "min_max":
 		return strategy.InvestDecisionMaking_min_max(ctx)
 	case "min_max_v2":
 		return strategy.InvestDecisionMaking_min_max_v2(ctx)
+	case "min_max_v3":
+		return strategy.InvestDecisionMaking_min_max_v3(ctx)
+	case "expected_value":
+		return strategy.InvestDecisionMaking_expected_value(ctx)
 	default:
 		return strategy.InvestDecisionMaking_allin(ctx)
 	}
@@ -96,20 +104,32 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 //TODO: Clean up these functions and move them to a more appropriate place in the strategy package i.e. into the individual strategies
 
 // Helper functions for enhanced context
-func isPistolRound(round int, halfLength int) bool {
-	return round == 1 || round == halfLength+1
+func isPistolRound(round int, halfLength int, isOT bool, OTHalfLength int) bool {
+	if !isOT {
+		return round == 1 || round == halfLength+1
+	} else {
+		return (round-halfLength*2)%OTHalfLength == 1
+	}
+
 }
 
-func isAfterPistol(round int, halfLength int, ownScore, opponentScore int) bool {
-	// Round 2 or 17, and we won the pistol round
-	return (round == 2 && ownScore > opponentScore) || (round == halfLength+1 && ownScore > opponentScore)
+func isAfterPistol(round int, halfLength int, ownScore, opponentScore int, isOT bool, OTHalfLength int) bool {
+	if !isOT {
+		return round == 2 || round == halfLength+2
+	} else {
+		return (round-halfLength*2)%OTHalfLength == 2
+	}
 }
 
-func isLastRoundHalf(round int, halfLength int) bool {
-	return round == halfLength || round == halfLength*2
+func isLastRoundHalf(round int, halfLength int, isOT bool, OTHalfLength int) bool {
+	if !isOT {
+		return round == halfLength || round == halfLength*2
+	} else {
+		return (round-halfLength*2)%OTHalfLength == 0
+	}
 }
 
-func calculateRoundImportance(ownScore, opponentScore, round int, halfLength int) float64 {
+func calculateRoundImportance(ownScore, opponentScore, round int, halfLength int, isOT bool, OTHalfLength int) float64 {
 	// Calculate round importance based on score situation and round number
 	scoreDiff := math.Abs(float64(ownScore - opponentScore))
 	totalScore := ownScore + opponentScore
@@ -117,7 +137,7 @@ func calculateRoundImportance(ownScore, opponentScore, round int, halfLength int
 	importance := 0.5 // Base importance
 
 	// Pistol rounds are always important
-	if isPistolRound(round, halfLength) {
+	if isPistolRound(round, halfLength, isOT, OTHalfLength) {
 		importance = 0.8
 	}
 
@@ -132,7 +152,7 @@ func calculateRoundImportance(ownScore, opponentScore, round int, halfLength int
 	}
 
 	// Last round of half
-	if isLastRoundHalf(round, halfLength) {
+	if isLastRoundHalf(round, halfLength, isOT, OTHalfLength) {
 		importance += 0.1
 	}
 

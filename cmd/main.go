@@ -292,7 +292,7 @@ func (c *SimulationConfig) Validate() error {
 		c.Team1Strategy = "all_in"
 	}
 	if c.Team2Strategy == "" {
-		c.Team2Strategy = "anti_allin"
+		c.Team2Strategy = "anti_allin_v2"
 	}
 	return nil
 }
