@@ -29,6 +29,7 @@ func main() {
 		ExportDetailedResults: false, // Default to not export individual results
 		ExportRounds:          false, // Default to not export round-by-round data
 		Exportpath:            "",    // Will be set after parsing args
+		SuppressOutput:        false,
 	}
 
 	// Parse command line arguments first to check for custom output path

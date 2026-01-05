@@ -6,8 +6,8 @@ func InvestDecisionMaking_anti_allin_v3(ctx StrategyContext_simple) float64 {
 	// anti_allin_v3, invests all in the beginning and end of halves/overtime. In between it tries to build up wealth
 	Score_to_Win := ctx.GameRules_strategy.HalfLength + (ctx.GameRules_strategy.OTHalfLength * (ctx.OvertimeAmount)) + 1
 
-	pressing_ratio := 1.1 //how much more the team wants to invest in order to win
-	overturn_ratio := 0.7 //how much less the team wants to invest in order to save for OT
+	pressing_ratio := 1.5 //how much more the team wants to invest in order to win
+	overturn_ratio := 0.6 //how much less the team wants to invest in order to save for OT
 
 	//always go all in if pistol round (in not OT rounds) or last round of half
 	if ctx.IsLastRoundHalf {
@@ -26,7 +26,11 @@ func InvestDecisionMaking_anti_allin_v3(ctx StrategyContext_simple) float64 {
 	if !ctx.IsOvertime {
 		if ctx.ConsecutiveLosses < 1 {
 			//try to invest accoring to the pressing factor
-			all_in_loss_bonus := math.Min(float64(ctx.ConsecutiveWins), float64(len(ctx.GameRules_strategy.LossBonus)))
+
+			//technically the loss bonus calculation is not accurate.
+			// Because it does not account for the loss bonus calculation method
+			// Accordingly, the loss bonus might be higher with the new method (i.e. team wins inbetween, the loss bonus is not reset)
+			all_in_loss_bonus := math.Min(float64(ctx.ConsecutiveWins), float64(len(ctx.GameRules_strategy.LossBonus)-1))
 			approx_funds := (ctx.GameRules_strategy.LossBonus[int(all_in_loss_bonus)] + ctx.GameRules_strategy.DefaultEquipment) * 5
 			approx_saved_eq := 0.0
 			if ctx.ConsecutiveWins == 1 {

@@ -29,6 +29,38 @@ type SimulationResult struct {
 	Error          error
 }
 
+// ErrorLogger handles thread-safe error logging to a file
+type ErrorLogger struct {
+	filePath string
+	mutex    sync.Mutex
+}
+
+// NewErrorLogger creates a new error logger
+func NewErrorLogger(exportPath string) *ErrorLogger {
+	errorFilePath := filepath.Join(exportPath, "simulation_errors.log")
+	return &ErrorLogger{
+		filePath: errorFilePath,
+	}
+}
+
+// LogError writes an error to the error log file with timestamp and game ID
+func (el *ErrorLogger) LogError(gameID string, err error) error {
+	el.mutex.Lock()
+	defer el.mutex.Unlock()
+
+	f, fileErr := os.OpenFile(el.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if fileErr != nil {
+		return fileErr
+	}
+	defer f.Close()
+
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	logEntry := fmt.Sprintf("[%s] Game: %s | Error: %v\n", timestamp, gameID, err)
+
+	_, writeErr := f.WriteString(logEntry)
+	return writeErr
+}
+
 // WorkerPool manages a pool of workers for running simulations
 type WorkerPool struct {
 	workers int
@@ -242,14 +274,17 @@ func RunParallelSimulations(config SimulationConfig) (*analysis.SimulationStats,
 	monitorCtx, monitorCancel := context.WithCancel(context.Background())
 	defer monitorCancel()
 
+	// Create error logger
+	errorLogger := NewErrorLogger(config.Exportpath)
+
 	// Start result collector goroutine
 	resultsDone := make(chan bool)
 	go func() {
 		defer close(resultsDone)
 		if config.CSVExportMode == 2 || config.CSVExportMode == 4 {
-			collectResultsWithGames(pool.results, stats, config.NumSimulations, &allGames, &gamesMutex)
+			collectResultsWithGames(pool.results, stats, config.NumSimulations, &allGames, &gamesMutex, errorLogger)
 		} else {
-			collectResults(pool.results, stats, config.NumSimulations)
+			collectResults(pool.results, stats, config.NumSimulations, errorLogger)
 		}
 	}()
 
@@ -406,15 +441,21 @@ func RunParallelSimulations(config SimulationConfig) (*analysis.SimulationStats,
 
 	return stats, nil
 } // collectResults processes simulation results and updates statistics
-func collectResults(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int) {
+func collectResults(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int, errorLogger *ErrorLogger) {
 	processedCount := int64(0)
 
 	for result := range results {
 		atomic.AddInt64(&processedCount, 1)
 
 		if result.Error != nil {
-			// Count failed simulations
+			// Count failed simulations and log error
 			stats.UpdateFailedSimulation()
+
+			// Log the error to file
+			if err := errorLogger.LogError(result.GameID, result.Error); err != nil {
+				// If logging fails, we don't want to crash the simulation
+				fmt.Fprintf(os.Stderr, "Warning: Failed to log error for %s: %v\n", result.GameID, err)
+			}
 			continue
 		}
 
@@ -432,7 +473,7 @@ func collectResults(results <-chan SimulationResult, stats *analysis.SimulationS
 }
 
 // collectResultsWithGames processes simulation results and stores games for CSV export
-func collectResultsWithGames(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int, allGames *[]*engine.Game, gamesMutex *sync.Mutex) {
+func collectResultsWithGames(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int, allGames *[]*engine.Game, gamesMutex *sync.Mutex, errorLogger *ErrorLogger) {
 	processedCount := int64(0)
 
 	for result := range results {
@@ -440,6 +481,12 @@ func collectResultsWithGames(results <-chan SimulationResult, stats *analysis.Si
 
 		if result.Error != nil {
 			stats.UpdateFailedSimulation()
+
+			// Log the error to file
+			if err := errorLogger.LogError(result.GameID, result.Error); err != nil {
+				// If logging fails, we don't want to crash the simulation
+				fmt.Fprintf(os.Stderr, "Warning: Failed to log error for %s: %v\n", result.GameID, err)
+			}
 			continue
 		}
 

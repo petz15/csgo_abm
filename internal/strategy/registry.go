@@ -30,7 +30,7 @@ var StrategyRegistry = map[string]StrategyFunc{
 	"adaptive_eco_v1": InvestDecisionMaking_adaptive_v1,
 	"adaptive_eco_v2": InvestDecisionMaking_adaptive_v2,
 	"smart_v1":        InvestDecisionMaking_smart_v1,
-	"default_half":    InvestDecisionMaking_half,
+	"half":            InvestDecisionMaking_half,
 
 	// ML-based
 	"ml_dqn":    InvestDecisionMaking_ml_dqn,
