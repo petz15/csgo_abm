@@ -35,7 +35,7 @@ def find_matchup_folders(tournament_folder):
 
 def analyze_matchup(matchup_folder, notebook_path):
     """
-    Analyze a single matchup by executing the notebook with updated configuration.
+    Analyze a single matchup by executing the notebook with nbconvert.
     Returns (success, matchup_name, report_path, error_msg)
     """
     matchup_name = matchup_folder.name
@@ -56,16 +56,13 @@ def analyze_matchup(matchup_folder, notebook_path):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_html = matchup_folder / f"analysis_report_{timestamp}_{t1_strat}_vs_{t2_strat}.html"
         
-        # Create a temporary notebook with updated paths using papermill-style parameters
-        # We'll use nbconvert with preprocessing
-        
         # Execute notebook using jupyter nbconvert (optimized for speed)
         cmd = [
             'jupyter', 'nbconvert',
             '--to', 'html',
             '--no-input',  # Hide code cells
             '--execute',
-            '--ExecutePreprocessor.timeout=300',  # 5 minute timeout (reduced from 10)
+            '--ExecutePreprocessor.timeout=300',  # 5 minute timeout
             '--ExecutePreprocessor.kernel_name=python3',  # Explicit kernel
             '--output', str(output_html),
             str(notebook_path)
@@ -73,10 +70,9 @@ def analyze_matchup(matchup_folder, notebook_path):
         
         # Set environment variables for the notebook to read
         env = os.environ.copy()
-        env['MATCHUP_FOLDER'] = str(matchup_folder)
-        env['CSV_FILE'] = str(csv_path)
-        env['JSON_FILE'] = str(json_path)
-        env['MPLBACKEND'] = 'Agg'  # Use non-interactive matplotlib backend (faster)
+        env['MATCHUP_FOLDER'] = str(matchup_folder.resolve())
+        env['CSV_FILE'] = str(csv_path.resolve())
+        env['JSON_FILE'] = str(json_path.resolve())
         
         # Execute
         result = subprocess.run(
@@ -84,7 +80,8 @@ def analyze_matchup(matchup_folder, notebook_path):
             env=env,
             capture_output=True,
             text=True,
-            cwd=matchup_folder.parent  # Run from parent directory
+            cwd=str(matchup_folder.parent),
+            timeout=300  # 5 minute timeout
         )
         
         if result.returncode == 0:
@@ -93,6 +90,8 @@ def analyze_matchup(matchup_folder, notebook_path):
             error_msg = result.stderr[-500:] if result.stderr else "Unknown error"
             return (False, matchup_name, None, error_msg)
             
+    except subprocess.TimeoutExpired:
+        return (False, matchup_name, None, "Timeout: execution exceeded 5 minutes")
     except Exception as e:
         return (False, matchup_name, None, str(e))
 
@@ -200,8 +199,6 @@ Examples:
             print(f"  - {name}: {error[:100]}")
         if len(failed) > 10:
             print(f"  ... and {len(failed) - 10} more")
-    
-   
     
     return 0 if not failed else 2  # Exit code 2 if some analyses failed
 

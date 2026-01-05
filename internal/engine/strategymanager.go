@@ -61,8 +61,8 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		return strategy.InvestDecisionMaking_adaptive_v1(ctx)
 	case "adaptive_eco_v2":
 		return strategy.InvestDecisionMaking_adaptive_v2(ctx)
-	case "yolo":
-		return strategy.InvestDecisionMaking_yolo(ctx)
+	case "random":
+		return strategy.InvestDecisionMaking_random(ctx)
 	case "scrooge":
 		return strategy.InvestDecisionMaking_scrooge(ctx)
 	case "smart_v1":
