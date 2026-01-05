@@ -281,11 +281,11 @@ func determineEquipmentSavedPerPlayer(oc *RoundOutcome, total_equipment float64)
 		// Normalize shares
 		total_share := sumArray(oc.CTEquipmentSharePerPlayer) + sumArray(oc.TEquipmentSharePerPlayer)
 		for i := range oc.CTEquipmentSharePerPlayer {
-			eq_value := oc.CTEquipmentSharePerPlayer[i] / total_share
+			eq_value := (oc.CTEquipmentSharePerPlayer[i] / total_share) * total_equipment
 			oc.CTEquipmentPerPlayer = append(oc.CTEquipmentPerPlayer, eq_value)
 		}
 		for i := range oc.TEquipmentSharePerPlayer {
-			eq_value := oc.TEquipmentSharePerPlayer[i] / total_share
+			eq_value := (oc.TEquipmentSharePerPlayer[i] / total_share) * total_equipment
 			oc.TEquipmentPerPlayer = append(oc.TEquipmentPerPlayer, eq_value)
 		}
 	} else {
