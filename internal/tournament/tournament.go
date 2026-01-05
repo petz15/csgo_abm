@@ -55,7 +55,8 @@ type Standings struct {
 	Rows []StandingsRow
 }
 
-// RoundRobinSchedule pairs each strategy with every other, with both orderings for side balance
+// RoundRobinSchedule pairs each strategy with every other,
+// with both orderings for balance (currently not necessary as starting side is randomized)
 func RoundRobinSchedule(strategies []string) []MatchSpec {
 	var matches []MatchSpec
 	for i := 0; i < len(strategies); i++ {
@@ -67,7 +68,7 @@ func RoundRobinSchedule(strategies []string) []MatchSpec {
 				Team2Name:     strategies[j],
 				Team2Strategy: strategies[j],
 			})
-			// B vs A (for side balance)
+			// B vs A
 			matches = append(matches, MatchSpec{
 				Team1Name:     strategies[j],
 				Team1Strategy: strategies[j],

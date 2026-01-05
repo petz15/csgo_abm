@@ -62,21 +62,23 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 	}
 
 	// Display simulation mode and export information
-	if config.ExportDetailedResults {
-		fmt.Printf("Sequential simulation with individual result export enabled\n")
-		fmt.Printf("Results will be saved to: %s/\n", config.Exportpath)
-		if config.NumSimulations > 10000 {
-			fmt.Printf("WARNING: Exporting %d individual results may create filesystem pressure\n", config.NumSimulations)
+	if !config.SuppressOutput {
+		if config.ExportDetailedResults {
+			fmt.Printf("Sequential simulation with individual result export enabled\n")
+			fmt.Printf("Results will be saved to: %s/\n", config.Exportpath)
+			if config.NumSimulations > 10000 {
+				fmt.Printf("WARNING: Exporting %d individual results may create filesystem pressure\n", config.NumSimulations)
+			}
+		} else {
+			fmt.Println("Sequential simulation with summary-only mode")
 		}
-	} else {
-		fmt.Println("Sequential simulation with summary-only mode")
-	}
 
-	if config.CSVExportMode > 0 {
-		fmt.Printf("CSV export mode: %d\n", config.CSVExportMode)
-	}
+		if config.CSVExportMode > 0 {
+			fmt.Printf("CSV export mode: %d\n", config.CSVExportMode)
+		}
 
-	fmt.Printf("Starting %d sequential simulations...\n", config.NumSimulations)
+		fmt.Printf("Starting %d sequential simulations...\n", config.NumSimulations)
+	}
 
 	for i := 0; i < config.NumSimulations; i++ {
 		// Generate a simulation prefix for this run
@@ -86,7 +88,9 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 		result, err := StartGame_default(config.Team1Name, config.Team1Strategy, config.Team2Name,
 			config.Team2Strategy, gameRules, simPrefix, config.ExportDetailedResults, false, config.CSVExportMode, config.Exportpath)
 		if err != nil {
-			fmt.Printf("Simulation %d failed: %v\n", i+1, err)
+			if !config.SuppressOutput {
+				fmt.Printf("Simulation %d failed: %v\n", i+1, err)
+			}
 			continue
 		}
 
@@ -121,7 +125,9 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 			progressInterval = 100
 		}
 		if config.NumSimulations > 100 && (i+1)%progressInterval == 0 {
-			fmt.Printf("Progress: %d/%d simulations completed\n", i+1, config.NumSimulations)
+			if !config.SuppressOutput {
+				fmt.Printf("Progress: %d/%d simulations completed\n", i+1, config.NumSimulations)
+			}
 		}
 	}
 
@@ -131,27 +137,41 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 
 	// Export combined CSV if mode 2 or 4
 	if config.CSVExportMode == 2 && len(allGames) > 0 {
-		fmt.Println("\nExporting combined full CSV...")
+		if !config.SuppressOutput {
+			fmt.Println("\nExporting combined full CSV...")
+		}
 		csvPath := fmt.Sprintf("%s/all_games_full.csv", config.Exportpath)
 		err := util.ExportAllGamesAllDataCSV(allGames, csvPath)
 		if err != nil {
-			fmt.Printf("Warning: Error exporting combined full CSV: %v\n", err)
+			if !config.SuppressOutput {
+				fmt.Printf("Warning: Error exporting combined full CSV: %v\n", err)
+			}
 		} else {
-			fmt.Printf("✅ Combined full CSV exported: %s\n", csvPath)
+			if !config.SuppressOutput {
+				fmt.Printf("✅ Combined full CSV exported: %s\n", csvPath)
+			}
 		}
 	} else if config.CSVExportMode == 4 && len(allGames) > 0 {
-		fmt.Println("\nExporting combined minimal CSV...")
+		if !config.SuppressOutput {
+			fmt.Println("\nExporting combined minimal CSV...")
+		}
 		csvPath := fmt.Sprintf("%s/all_games_minimal.csv", config.Exportpath)
 		err := util.ExportAllGamesMinimalCSV(allGames, csvPath)
 		if err != nil {
-			fmt.Printf("Warning: Error exporting combined minimal CSV: %v\n", err)
+			if !config.SuppressOutput {
+				fmt.Printf("Warning: Error exporting combined minimal CSV: %v\n", err)
+			}
 		} else {
-			fmt.Printf("✅ Combined minimal CSV exported: %s\n", csvPath)
+			if !config.SuppressOutput {
+				fmt.Printf("✅ Combined minimal CSV exported: %s\n", csvPath)
+			}
 		}
 	}
 
 	// Generate comprehensive final summary
-	showstats(stats)
+	if !config.SuppressOutput {
+		showstats(stats)
+	}
 
 	// Advanced analysis removed
 
@@ -159,9 +179,11 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 	if config.ExportDetailedResults {
 		summaryPath := fmt.Sprintf("%s/simulation_summary.json", config.Exportpath)
 		exportSummary_v2(stats, summaryPath)
-		fmt.Printf("\nResults exported to: %s/\n", config.Exportpath)
-		fmt.Printf("- Individual game results: %d JSON files\n", stats.CompletedSims)
-		fmt.Println("- Summary statistics: simulation_summary.json")
+		if !config.SuppressOutput {
+			fmt.Printf("\nResults exported to: %s/\n", config.Exportpath)
+			fmt.Printf("- Individual game results: %d JSON files\n", stats.CompletedSims)
+			fmt.Println("- Summary statistics: simulation_summary.json")
+		}
 	} else {
 		// Use original export method for single file
 		simID := util.CreateGameID()

@@ -190,7 +190,7 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 }
 
 // RunParallelSimulations orchestrates the execution of multiple simulations
-func RunParallelSimulations(config SimulationConfig) error {
+func RunParallelSimulations(config SimulationConfig) (*analysis.SimulationStats, error) {
 	startTime := time.Now()
 
 	// Initialize statistics
@@ -215,21 +215,23 @@ func RunParallelSimulations(config SimulationConfig) error {
 
 	// Advanced analysis removed
 
-	fmt.Printf("Starting %d simulations with %d concurrent workers...\n",
-		config.NumSimulations, config.MaxConcurrent)
-	fmt.Printf("Memory limit: %d MB\n", config.MemoryLimit)
+	if !config.SuppressOutput {
+		fmt.Printf("Starting %d simulations with %d concurrent workers...\n",
+			config.NumSimulations, config.MaxConcurrent)
+		fmt.Printf("Memory limit: %d MB\n", config.MemoryLimit)
 
-	if config.ExportDetailedResults {
-		fmt.Printf("Individual result export: ENABLED (results will be saved to %s/)\n", config.Exportpath)
-		if config.NumSimulations > 10000 {
-			fmt.Printf("WARNING: Exporting %d individual results may create filesystem pressure\n", config.NumSimulations)
+		if config.ExportDetailedResults {
+			fmt.Printf("Individual result export: ENABLED (results will be saved to %s/)\n", config.Exportpath)
+			if config.NumSimulations > 10000 {
+				fmt.Printf("WARNING: Exporting %d individual results may create filesystem pressure\n", config.NumSimulations)
+			}
+		} else {
+			fmt.Println("Individual result export: DISABLED (summary-only mode)")
 		}
-	} else {
-		fmt.Println("Individual result export: DISABLED (summary-only mode)")
-	}
 
-	if config.CSVExportMode > 0 {
-		fmt.Printf("CSV export mode: %d\n", config.CSVExportMode)
+		if config.CSVExportMode > 0 {
+			fmt.Printf("CSV export mode: %d\n", config.CSVExportMode)
+		}
 	}
 
 	// Create worker pool
@@ -280,12 +282,16 @@ func RunParallelSimulations(config SimulationConfig) error {
 		if pool.AddJob(job) {
 			jobsSubmitted++
 		} else {
-			fmt.Printf("Warning: Failed to submit job %d, pool is shutting down\n", simID+1)
+			if !config.SuppressOutput {
+				fmt.Printf("Warning: Failed to submit job %d, pool is shutting down\n", simID+1)
+			}
 			break
 		}
 	}
 
-	fmt.Printf("Successfully submitted %d/%d jobs\n", jobsSubmitted, config.NumSimulations)
+	if !config.SuppressOutput {
+		fmt.Printf("Successfully submitted %d/%d jobs\n", jobsSubmitted, config.NumSimulations)
+	}
 
 	// Stop the worker pool and wait for completion
 	pool.Stop()
@@ -299,21 +305,27 @@ func RunParallelSimulations(config SimulationConfig) error {
 	case <-resultsDone:
 		// Results collected successfully
 	case <-timeout:
-		fmt.Println("Warning: Timeout waiting for results collection")
+		if !config.SuppressOutput {
+			fmt.Println("Warning: Timeout waiting for results collection")
+		}
 	}
 
 	select {
 	case <-memoryMonitorDone:
 		// Memory monitor finished
 	case <-timeout:
-		fmt.Println("Warning: Timeout waiting for memory monitor")
+		if !config.SuppressOutput {
+			fmt.Println("Warning: Timeout waiting for memory monitor")
+		}
 	}
 
 	select {
 	case <-progressDone:
 		// Progress reporter finished
 	case <-timeout:
-		fmt.Println("Warning: Timeout waiting for progress reporter")
+		if !config.SuppressOutput {
+			fmt.Println("Warning: Timeout waiting for progress reporter")
+		}
 	}
 
 	// Calculate final statistics using unified analysis package
@@ -340,43 +352,59 @@ func RunParallelSimulations(config SimulationConfig) error {
 	// Export summary statistics
 	summaryPath := filepath.Join(config.Exportpath, "simulation_summary.json")
 	if err := exportSummary(stats, summaryPath); err != nil {
-		fmt.Printf("Warning: Failed to export summary: %v\n", err)
+		if !config.SuppressOutput {
+			fmt.Printf("Warning: Failed to export summary: %v\n", err)
+		}
 	}
 
 	// Export combined CSV if mode 2 or 4
 	if config.CSVExportMode == 2 && len(allGames) > 0 {
-		fmt.Println("\nExporting combined full CSV...")
+		if !config.SuppressOutput {
+			fmt.Println("\nExporting combined full CSV...")
+		}
 		csvPath := filepath.Join(config.Exportpath, "all_games_full.csv")
 		err := util.ExportAllGamesAllDataCSV(allGames, csvPath)
 		if err != nil {
-			fmt.Printf("Warning: Error exporting combined full CSV: %v\n", err)
+			if !config.SuppressOutput {
+				fmt.Printf("Warning: Error exporting combined full CSV: %v\n", err)
+			}
 		} else {
-			fmt.Printf("✅ Combined full CSV exported: %s\n", csvPath)
+			if !config.SuppressOutput {
+				fmt.Printf("✅ Combined full CSV exported: %s\n", csvPath)
+			}
 		}
 	} else if config.CSVExportMode == 4 && len(allGames) > 0 {
-		fmt.Println("\nExporting combined minimal CSV...")
+		if !config.SuppressOutput {
+			fmt.Println("\nExporting combined minimal CSV...")
+		}
 		csvPath := filepath.Join(config.Exportpath, "all_games_minimal.csv")
 		err := util.ExportAllGamesMinimalCSV(allGames, csvPath)
 		if err != nil {
-			fmt.Printf("Warning: Error exporting combined minimal CSV: %v\n", err)
+			if !config.SuppressOutput {
+				fmt.Printf("Warning: Error exporting combined minimal CSV: %v\n", err)
+			}
 		} else {
-			fmt.Printf("✅ Combined minimal CSV exported: %s\n", csvPath)
+			if !config.SuppressOutput {
+				fmt.Printf("✅ Combined minimal CSV exported: %s\n", csvPath)
+			}
 		}
 	}
 
 	// Advanced analysis removed
 
 	// Print final results
-	analysis.PrintEnhancedStats(stats)
+	if !config.SuppressOutput {
+		analysis.PrintEnhancedStats(stats)
 
-	// Print export information
-	fmt.Printf("\nResults exported to: %s/\n", config.Exportpath)
-	if config.ExportDetailedResults {
-		fmt.Printf("- Individual game results: %d JSON files\n", atomic.LoadInt64(&stats.CompletedSims))
+		// Print export information
+		fmt.Printf("\nResults exported to: %s/\n", config.Exportpath)
+		if config.ExportDetailedResults {
+			fmt.Printf("- Individual game results: %d JSON files\n", atomic.LoadInt64(&stats.CompletedSims))
+		}
+		fmt.Println("- Summary statistics: simulation_summary.json")
 	}
-	fmt.Println("- Summary statistics: simulation_summary.json")
 
-	return nil
+	return stats, nil
 } // collectResults processes simulation results and updates statistics
 func collectResults(results <-chan SimulationResult, stats *analysis.SimulationStats, totalSims int) {
 	processedCount := int64(0)
@@ -385,7 +413,6 @@ func collectResults(results <-chan SimulationResult, stats *analysis.SimulationS
 		atomic.AddInt64(&processedCount, 1)
 
 		if result.Error != nil {
-			fmt.Printf("Simulation %s failed: %v\n", result.GameID, result.Error)
 			// Count failed simulations
 			stats.UpdateFailedSimulation()
 			continue
@@ -412,7 +439,6 @@ func collectResultsWithGames(results <-chan SimulationResult, stats *analysis.Si
 		atomic.AddInt64(&processedCount, 1)
 
 		if result.Error != nil {
-			fmt.Printf("Simulation %s failed: %v\n", result.GameID, result.Error)
 			stats.UpdateFailedSimulation()
 			continue
 		}
@@ -485,13 +511,6 @@ func reportProgressWithContext(ctx context.Context, stats *analysis.SimulationSt
 		select {
 		case <-ticker.C:
 			completed := atomic.LoadInt64(&stats.CompletedSims)
-			elapsed := time.Since(startTime)
-			rate := float64(completed) / elapsed.Seconds()
-
-			fmt.Printf("Progress: %d/%d (%.1f%%) - Rate: %.1f sims/sec - Elapsed: %s\n",
-				completed, totalSims,
-				float64(completed)/float64(totalSims)*100,
-				rate, elapsed.Round(time.Second))
 
 			// Break if simulations are complete
 			if completed >= int64(totalSims) {

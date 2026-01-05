@@ -187,7 +187,7 @@ func main() {
 		}
 	} else {
 		// Multiple simulations mode
-		err := RunParallelSimulations(config)
+		_, err := RunParallelSimulations(config)
 		if err != nil {
 			fmt.Printf("Error running parallel simulations: %v\n", err)
 			os.Exit(1)
@@ -278,6 +278,7 @@ type SimulationConfig struct {
 	AdvancedAnalysis      bool             `json:"advanced_analysis"`     // Enable advanced economic analysis
 	CSVExportMode         int              `json:"csv_export_mode"`       // 0=none, 1=individual full, 2=combined full, 3=individual minimal, 4=combined minimal
 	Exportpath            string           `json:"export_path,omitempty"` // Path for exporting results
+	SuppressOutput        bool             `json:"suppress_output"`       // Suppress terminal output during simulations
 }
 
 // Validate validates the simulation configuration
