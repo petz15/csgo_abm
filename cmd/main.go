@@ -2,6 +2,7 @@ package main
 
 import (
 	"csgo_abm/internal/engine"
+	"csgo_abm/internal/strategy"
 	"fmt"
 	"math"
 	"os"
@@ -23,7 +24,7 @@ func main() {
 		Team1Name:             "Team A",
 		Team1Strategy:         "all_in",
 		Team2Name:             "Team B",
-		Team2Strategy:         "anti_allin",
+		Team2Strategy:         "anti_allin_v2",
 		Sequential:            false, // Default to parallel simulations
 		ExportDetailedResults: false, // Default to not export individual results
 		ExportRounds:          false, // Default to not export round-by-round data
@@ -39,6 +40,7 @@ func main() {
 	tournamentFormat := "roundrobin"
 	games := 1000
 	strategiesCSV := ""
+
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "-n", "--num":
@@ -139,6 +141,22 @@ func main() {
 
 	config.GameRules = customConfig.GameRules
 
+	// Validate strategies BEFORE starting any simulations
+	if err := strategy.ValidateStrategy(config.Team1Strategy); err != nil {
+		fmt.Printf("Invalid Strategy for Team 1: %v\n", err)
+		os.Exit(1)
+	}
+	if err := strategy.ValidateStrategy(config.Team2Strategy); err != nil {
+		fmt.Printf("Invalid Strategy for Team 2: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Confirm strategies being used
+	if !config.SuppressOutput {
+		fmt.Printf("Confirmed Team 1 strategy: %s\n", config.Team1Strategy)
+		fmt.Printf("Confirmed Team 2 strategy: %s\n", config.Team2Strategy)
+	}
+
 	// Run tournament mode
 	if tournamentMode {
 		if strategiesCSV == "" {
@@ -204,7 +222,6 @@ func printUsage() {
 	fmt.Println("  -s, --sequential       Run simulations sequentially instead of in parallel")
 	fmt.Println("  -e, --export           Export individual game results as JSON files (works with both modes)")
 	fmt.Println("  -r, --rounds           Export round-by-round data for each game (single simulation only)")
-	fmt.Println("  -a, --advanced         Enable advanced economic analysis with graphs (works with multiple simulations)")
 	fmt.Println("  --csv <mode>           CSV export mode: 0=none, 1=individual full, 2=combined full, 3=individual minimal, 4=combined minimal")
 	fmt.Println("  -o, --output <path>    Results output directory (default: results_YYYYMMDD_HHMMSS)")
 	fmt.Println("  -g, --gamerules <file> Path to JSON file with custom game rules (default: built-in defaults)")
@@ -219,47 +236,7 @@ func printUsage() {
 	fmt.Println("\nGame Rules Configuration:")
 	fmt.Println("  You can customize game parameters using a JSON file. Example:")
 	fmt.Println("  go run ./cmd -g example_gamerules.json")
-	fmt.Println("  ")
-	fmt.Println("  The JSON file can contain any or all of these fields:")
-	fmt.Println("  {")
-	fmt.Println("    \"defaultEquipment\": 250.0,    // Equipment cost per player")
-	fmt.Println("    \"otFunds\": 10000.0,           // Overtime starting funds")
-	fmt.Println("    \"startingFunds\": 1000.0,      // Match starting funds")
-	fmt.Println("    \"halfLength\": 12,             // Rounds per half")
-	fmt.Println("    \"otHalfLength\": 3             // Overtime rounds per half")
-	fmt.Println("  }")
-	fmt.Println("  ")
 	fmt.Println("  Missing fields will use default values automatically.")
-	fmt.Println("\nExamples:")
-	fmt.Println("  # Run a single simulation")
-	fmt.Println("  go run ./cmd")
-	fmt.Println("  # Run 100 simulations using 8 cores")
-	fmt.Println("  go run ./cmd -n 100 -c 8")
-	fmt.Println("  # Run 1000 simulations with individual result export")
-	fmt.Println("  go run ./cmd -n 1000 -c 4 -e")
-	fmt.Println("  # Run 500 simulations sequentially with result export to custom folder")
-	fmt.Println("  go run ./cmd -n 500 -s -e -o my_results")
-	fmt.Println("  # Run 10,000 simulations with optimized memory settings")
-	fmt.Println("  go run ./cmd -n 10000 -c 4 -m 500")
-	fmt.Println("  # Run 100,000 simulations with memory-efficient settings")
-	fmt.Println("  go run ./cmd -n 100000 -c 4 -m 1000")
-	fmt.Println("  # Run 1,000,000 simulations (use lower concurrent workers for stability)")
-	fmt.Println("  go run ./cmd -n 1000000 -c 2 -m 2000")
-	fmt.Println("  # Run with advanced economic analysis and graphs")
-	fmt.Println("  go run ./cmd -n 1000 -a")
-	fmt.Println("\nResult Export Options:")
-	fmt.Println("  # Export individual results in parallel mode")
-	fmt.Println("  go run ./cmd -n 100 -e")
-	fmt.Println("  # Export individual results to custom directory")
-	fmt.Println("  go run ./cmd -n 100 -s -e -o custom_output")
-	fmt.Println("  # Summary-only mode (default, recommended for large simulations)")
-	fmt.Println("  go run ./cmd -n 10000")
-	fmt.Println("\nLarge-scale simulation recommendations:")
-	fmt.Println("  - For 100K+ simulations: Use 4 or fewer cores to avoid memory pressure")
-	fmt.Println("  - For 1M+ simulations: Use 2-4 cores with 2GB+ memory limit")
-	fmt.Println("  - Avoid -e flag for very large runs (>10K) to prevent filesystem issues")
-	fmt.Println("  - Monitor system resources during long-running simulations")
-	fmt.Println("  - Results are processed directly in memory for optimal performance")
 }
 
 // SimulationConfig unified configuration for all simulation types
@@ -293,7 +270,7 @@ func (c *SimulationConfig) Validate() error {
 		c.Team1Strategy = "all_in"
 	}
 	if c.Team2Strategy == "" {
-		c.Team2Strategy = "anti_allin_v2"
+		c.Team2Strategy = "anti_allin_v3"
 	}
 	return nil
 }

@@ -1,5 +1,7 @@
 package engine
 
+import "math"
+
 // Team represents a team in the simulation with its properties and methods.
 type Team struct {
 	Name      string
@@ -62,7 +64,7 @@ func (t *Team) NewRound(defaultequipment float64) {
 		Funds:                 previousRound.Funds,
 		Funds_start:           previousRound.Funds,
 		Earned:                0,
-		RS_Eq_value:           previousRound.RE_Eq_value + (float64(5-previousRound.Survivors) * defaultequipment),
+		RS_Eq_value:           math.Min(previousRound.RE_Eq_value, float64(previousRound.Survivors)*defaultequipment) + (float64(5-previousRound.Survivors) * defaultequipment),
 		FTE_Eq_value:          0,
 		RE_Eq_value:           0,
 		Survivors:             0,

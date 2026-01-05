@@ -2,6 +2,7 @@ package main
 
 import (
 	"csgo_abm/internal/analysis"
+	"csgo_abm/internal/strategy"
 	"csgo_abm/internal/tournament"
 	"fmt"
 	"os"
@@ -50,6 +51,15 @@ func runTournament(cfg *SimulationConfig, custom *CustomConfig, strategiesCSV st
 	}
 	if len(list) < 2 {
 		return fmt.Errorf("need at least two strategies for a tournament")
+	}
+
+	// Validate all strategies upfront
+	fmt.Println("Validating strategies...")
+	for _, strat := range list {
+		if err := strategy.ValidateStrategy(strat); err != nil {
+			return fmt.Errorf("❌ %v", err)
+		}
+		fmt.Printf("  ✓ %s\n", strat)
 	}
 
 	var matches []MatchSpec

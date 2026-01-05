@@ -2,6 +2,7 @@ package engine
 
 import (
 	"csgo_abm/internal/strategy"
+	"fmt"
 	"math"
 )
 
@@ -10,7 +11,7 @@ type StrategyManager struct {
 }
 
 func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gameR GameRules, g *Game) float64 {
-	// Implement the logic to call the appropriate strategy for the team
+	// Build context once
 	ctx := strategy.StrategyContext_simple{
 		Funds:             team.GetCurrentFunds(),
 		CurrentRound:      curround,
@@ -52,50 +53,15 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		},
 	}
 
-	switch team.Strategy {
-	case "all_in":
-		return strategy.InvestDecisionMaking_allin(ctx)
-	case "default_half":
-		return strategy.InvestDecisionMaking_half(ctx)
-	case "adaptive_eco_v1":
-		return strategy.InvestDecisionMaking_adaptive_v1(ctx)
-	case "adaptive_eco_v2":
-		return strategy.InvestDecisionMaking_adaptive_v2(ctx)
-	case "random":
-		return strategy.InvestDecisionMaking_random(ctx)
-	case "scrooge":
-		return strategy.InvestDecisionMaking_scrooge(ctx)
-	case "smart_v1":
-		return strategy.InvestDecisionMaking_smart_v1(ctx)
-	case "all_in_v2":
-		return strategy.InvestDecisionMaking_allin_v2(ctx)
-	case "ml_dqn":
-		return strategy.InvestDecisionMaking_ml_dqn(ctx)
-	case "ml_sgd":
-		return strategy.InvestDecisionMaking_ml_sgd(ctx)
-	case "ml_tree":
-		return strategy.InvestDecisionMaking_ml_tree(ctx)
-	case "ml_forest":
-		return strategy.InvestDecisionMaking_ml_forest(ctx)
-	case "casual":
-		return strategy.InvestDecisionMaking_casual(ctx)
-	case "anti_all":
-		return strategy.InvestDecisionMaking_anti_allin(ctx)
-	case "anti_all_v2":
-		return strategy.InvestDecisionMaking_anti_allin_v2(ctx)
-	case "anti_all_v3":
-		return strategy.InvestDecisionMaking_anti_allin_v3(ctx)
-	case "min_max":
-		return strategy.InvestDecisionMaking_min_max(ctx)
-	case "min_max_v2":
-		return strategy.InvestDecisionMaking_min_max_v2(ctx)
-	case "min_max_v3":
-		return strategy.InvestDecisionMaking_min_max_v3(ctx)
-	case "expected_value":
-		return strategy.InvestDecisionMaking_expected_value(ctx)
-	default:
-		return strategy.InvestDecisionMaking_allin(ctx)
+	// Get strategy function from registry
+	strategyFunc, err := strategy.GetStrategy(team.Strategy)
+	if err != nil {
+		// This should never happen if validation is done upfront
+		// But provide a safe fallback just in case
+		panic(fmt.Sprintf("FATAL: Invalid strategy '%s' for team - this should have been caught during validation!", team.Strategy))
 	}
+
+	return strategyFunc(ctx)
 }
 
 //most of the following functions are used to enhance the context for decision making
