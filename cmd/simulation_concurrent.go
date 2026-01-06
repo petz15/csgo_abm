@@ -155,10 +155,15 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
+				// Capture stack trace for panic
+				buf := make([]byte, 4096)
+				n := runtime.Stack(buf, false)
+				stackTrace := string(buf[:n])
+				
 				select {
 				case resultChan <- SimulationResult{
 					GameID: fmt.Sprintf("%s_panic", simPrefix),
-					Error:  fmt.Errorf("simulation panicked: %v", r),
+					Error:  fmt.Errorf("simulation panicked: %v\nStack Trace:\n%s", r, stackTrace),
 				}:
 				case <-ctx.Done():
 					// Context cancelled, don't block
@@ -184,7 +189,8 @@ func (wp *WorkerPool) processSingleSimulation(job SimulationJob) SimulationResul
 		if err != nil {
 			result = SimulationResult{
 				GameID: fmt.Sprintf("%s_error", simPrefix),
-				Error:  err,
+				Error:  fmt.Errorf("game execution failed (Sim #%d, %s vs %s): %w", 
+					job.SimID, job.Config.Team1Strategy, job.Config.Team2Strategy, err),
 			}
 		} else {
 			result = SimulationResult{

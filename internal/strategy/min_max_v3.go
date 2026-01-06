@@ -11,7 +11,7 @@ func InvestDecisionMaking_min_max_v3(ctx StrategyContext_simple) float64 {
 		return ctx.Funds
 	}
 
-	if ctx.IsPistolRound {
+	if ctx.IsFirstRoundHalf {
 		return ctx.Funds
 	} else if ctx.IsLastRoundHalf {
 		return ctx.Funds

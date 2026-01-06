@@ -4,13 +4,13 @@ Automatically analyzes all matchup folders and generates HTML reports.
 """
 
 import os
-import subprocess
 import json
 import argparse
 from pathlib import Path
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import sys
+import papermill as pm
 
 def find_matchup_folders(tournament_folder):
     """Find all matchup_XXX folders in the tournament directory."""
@@ -35,65 +35,44 @@ def find_matchup_folders(tournament_folder):
 
 def analyze_matchup(matchup_folder, notebook_path):
     """
-    Analyze a single matchup by executing the notebook with nbconvert.
-    Returns (success, matchup_name, report_path, error_msg)
+    Analyze a single matchup by executing the notebook with papermill.
+    The notebook handles its own export and filename generation.
+    Returns (success, matchup_name, error_msg)
     """
     matchup_name = matchup_folder.name
     
     try:
         # Paths
-        csv_path = matchup_folder / "all_games_minimal.csv"
-        json_path = matchup_folder / "simulation_summary.json"
+        csv_path = str((matchup_folder / "all_games_minimal.csv").resolve())
+        json_path = str((matchup_folder / "simulation_summary.json").resolve())
+        folder_path = str(matchup_folder.resolve())
         
-        # Read strategy names from JSON
-        with open(json_path, 'r') as f:
-            sim_data = json.load(f)
-        
-        t1_strat = sim_data['simulation_config']['team1_strategy']
-        t2_strat = sim_data['simulation_config']['team2_strategy']
-        
-        # Generate output filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_html = matchup_folder / f"analysis_report_{timestamp}_{t1_strat}_vs_{t2_strat}.html"
-        
-        # Execute notebook using jupyter nbconvert (optimized for speed)
-        cmd = [
-            'jupyter', 'nbconvert',
-            '--to', 'html',
-            '--no-input',  # Hide code cells
-            '--execute',
-            '--ExecutePreprocessor.timeout=300',  # 5 minute timeout
-            '--ExecutePreprocessor.kernel_name=python3',  # Explicit kernel
-            '--output', str(output_html),
-            str(notebook_path)
-        ]
-        
-        # Set environment variables for the notebook to read
-        env = os.environ.copy()
-        env['MATCHUP_FOLDER'] = str(matchup_folder.resolve())
-        env['CSV_FILE'] = str(csv_path.resolve())
-        env['JSON_FILE'] = str(json_path.resolve())
-        
-        # Execute
-        result = subprocess.run(
-            cmd,
-            env=env,
-            capture_output=True,
-            text=True,
+        # Execute notebook using papermill
+        # Parameters are injected directly into the notebook
+        pm.execute_notebook(
+            str(notebook_path),
+            None,  # Don't save output notebook
+            parameters={
+                'FOLDER_PATH': folder_path,
+                'CSV_FILE_PATH': csv_path,
+                'CSV_INFO_FILE_PATH': json_path,
+            },
             cwd=str(matchup_folder.parent),
-            timeout=300  # 5 minute timeout
+            progress_bar=False,
+            request_save_on_cell_execute=False,
+            kernel_name='python3'
         )
         
-        if result.returncode == 0:
-            return (True, matchup_name, str(output_html), None)
-        else:
-            error_msg = result.stderr[-500:] if result.stderr else "Unknown error"
-            return (False, matchup_name, None, error_msg)
+        return (True, matchup_name, None)
             
-    except subprocess.TimeoutExpired:
-        return (False, matchup_name, None, "Timeout: execution exceeded 5 minutes")
+    except pm.PapermillExecutionError as e:
+        # Extract the relevant error information
+        error_msg = str(e)
+        if len(error_msg) > 500:
+            error_msg = error_msg[-500:]
+        return (False, matchup_name, error_msg)
     except Exception as e:
-        return (False, matchup_name, None, str(e))
+        return (False, matchup_name, str(e))
 
 def main():
     # Parse command line arguments
@@ -167,10 +146,10 @@ Examples:
         for i, future in enumerate(as_completed(futures), 1):
             folder = futures[future]
             try:
-                success, name, report_path, error = future.result()
+                success, name, error = future.result()
                 
                 if success:
-                    successful.append((name, report_path))
+                    successful.append(name)
                     print(f"✓ [{i}/{len(matchup_folders)}] {name} - SUCCESS")
                 else:
                     failed.append((name, error))

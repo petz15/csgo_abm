@@ -4,28 +4,30 @@ import "math/rand"
 
 // StrategyContext holds all relevant information for economic decision making
 type StrategyContext_simple struct {
-	Funds              float64
-	Equipment          float64
-	PlayersAlive       int     // Number of players alive in the team
-	RoundImportance    float64 // Importance of the current round
-	CurrentRound       int
-	OpponentScore      int
-	OwnScore           int
-	ConsecutiveLosses  int
-	ConsecutiveWins    int
-	LossBonusLevel     int  // Current loss bonus level
-	Side               bool // true = CT, false = T
-	IsPistolRound      bool
-	IsLastRoundHalf    bool
-	IsOvertime         bool
-	OvertimeAmount     int // Number of overtime periods played
-	IsAfterPistol      bool
-	OwnSurvivors       int  // Number of survivors in the previous RoundEndReason
-	EnemySurvivors     int  // Number of enemy survivors in the previous RoundEndReason
-	RoundEndReason     int  // Reason for the end of the last round
-	Is_BombPlanted     bool // Whether the bomb was planted in the last round
-	RNG                *rand.Rand
-	GameRules_strategy GameRules_strategymanager
+	Funds                   float64
+	Equipment               float64
+	PlayersAlive            int     // Number of players alive in the team
+	RoundImportance         float64 // Importance of the current round
+	CurrentRound            int
+	OpponentScore           int
+	OwnScore                int
+	ConsecutiveLosses       int
+	ConsecutiveWins         int
+	LossBonusLevel          int  // Current loss bonus level
+	LossBonusLevel_opponent int  // Current loss bonus level of opponent
+	Side                    bool // true = CT, false = T
+	IsFirstRoundHalf        bool
+	IsSecondRoundHalf       bool
+	IsLastRoundHalf         bool
+	IsOvertime              bool
+	OvertimeAmount          int // Number of overtime periods played
+	IsAfterPistol           bool
+	OwnSurvivors            int  // Number of survivors in the previous RoundEndReason
+	EnemySurvivors          int  // Number of enemy survivors in the previous RoundEndReason
+	RoundEndReason          int  // Reason for the end of the last round
+	Is_BombPlanted          bool // Whether the bomb was planted in the last round
+	RNG                     *rand.Rand
+	GameRules_strategy      GameRules_strategymanager
 }
 
 type GameRules_strategymanager struct {

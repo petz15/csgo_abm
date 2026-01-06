@@ -132,7 +132,8 @@ func runTournament(cfg *SimulationConfig, custom *CustomConfig, strategiesCSV st
 			// Run concurrent simulations
 			stats, err = RunParallelSimulations(matchConfig)
 			if err != nil {
-				return fmt.Errorf("matchup %s vs %s failed: %v", m.Team1Strategy, m.Team2Strategy, err)
+				return fmt.Errorf("matchup %d/%d (%s vs %s) failed after running %d games: %w",
+					i+1, len(matches), m.Team1Strategy, m.Team2Strategy, games, err)
 			}
 		}
 

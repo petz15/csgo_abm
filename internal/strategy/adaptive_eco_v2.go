@@ -71,7 +71,7 @@ func applyRoundModifiersV2(baseInvestment float64, ctx StrategyContext_simple, e
 	investment := baseInvestment
 
 	// Pistol round logic
-	if ctx.IsPistolRound {
+	if ctx.IsFirstRoundHalf {
 		// Pistol rounds are crucial - always invest appropriately
 		pistolInvestment := math.Min(ctx.Funds*0.8, 800.0*5)
 		return math.Max(investment, pistolInvestment)

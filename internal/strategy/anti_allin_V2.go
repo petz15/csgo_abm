@@ -6,9 +6,9 @@ func InvestDecisionMaking_anti_allin_v2(ctx StrategyContext_simple) float64 {
 	//Round context decision making
 	if ctx.IsLastRoundHalf {
 		return ctx.Funds
-	} else if ctx.IsPistolRound {
+	} else if ctx.IsFirstRoundHalf {
 		return ctx.Funds
-	} else if ctx.IsAfterPistol && ctx.ConsecutiveLosses > 1 {
+	} else if ctx.IsSecondRoundHalf && ctx.ConsecutiveLosses > 1 {
 		return 0
 	} else if ctx.GameRules_strategy.HalfLength-ctx.OpponentScore == 1 && !ctx.IsOvertime {
 		return ctx.Funds * 0.8

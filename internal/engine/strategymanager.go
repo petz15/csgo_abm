@@ -13,25 +13,26 @@ type StrategyManager struct {
 func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gameR GameRules, g *Game) float64 {
 	// Build context once
 	ctx := strategy.StrategyContext_simple{
-		Funds:             team.GetCurrentFunds(),
-		CurrentRound:      curround,
-		OpponentScore:     opponent.GetScore(),
-		OwnScore:          team.GetScore(),
-		ConsecutiveLosses: team.GetConsecutiveloss(),
-		ConsecutiveWins:   team.GetConsecutivewins(),
-		LossBonusLevel:    team.GetCurrentLossBonusLevel(),
-		Side:              team.GetSide(),
-		Equipment:         team.GetRSEquipment(),
-		IsOvertime:        isOvertime,
-		OvertimeAmount:    g.OTcounter,
-		IsPistolRound:     isPistolRound(curround, gameR.HalfLength, isOvertime, gameR.OTHalfLength),
-		IsAfterPistol:     isAfterPistol(curround, gameR.HalfLength, team.GetScore(), opponent.GetScore(), isOvertime, gameR.OTHalfLength),
-		IsLastRoundHalf:   isLastRoundHalf(curround, gameR.HalfLength, isOvertime, gameR.OTHalfLength),
-		OwnSurvivors:      team.GetpreviousSurvivors(),
-		EnemySurvivors:    opponent.GetpreviousSurvivors(),
-		RoundEndReason:    g.GetPreviousRoundEndReason(),
-		Is_BombPlanted:    g.GetPreviousBombPlant(),
-		RNG:               g.rng,
+		Funds:                   team.GetCurrentFunds(),
+		CurrentRound:            curround,
+		OpponentScore:           opponent.GetScore(),
+		OwnScore:                team.GetScore(),
+		ConsecutiveLosses:       team.GetConsecutiveloss(),
+		ConsecutiveWins:         team.GetConsecutivewins(),
+		LossBonusLevel:          team.GetCurrentLossBonusLevel(),
+		LossBonusLevel_opponent: opponent.GetCurrentLossBonusLevel(),
+		Side:                    team.GetSide(),
+		Equipment:               team.GetRSEquipment(),
+		IsOvertime:              isOvertime,
+		OvertimeAmount:          g.OTcounter,
+		IsFirstRoundHalf:        IsFirstRoundHalf(curround, gameR.HalfLength, isOvertime, gameR.OTHalfLength),
+		IsSecondRoundHalf:       IsSecondRoundHalf(curround, gameR.HalfLength, team.GetScore(), opponent.GetScore(), isOvertime, gameR.OTHalfLength),
+		IsLastRoundHalf:         isLastRoundHalf(curround, gameR.HalfLength, isOvertime, gameR.OTHalfLength),
+		OwnSurvivors:            team.GetpreviousSurvivors(),
+		EnemySurvivors:          opponent.GetpreviousSurvivors(),
+		RoundEndReason:          g.GetPreviousRoundEndReason(),
+		Is_BombPlanted:          g.GetPreviousBombPlant(),
+		RNG:                     g.rng,
 		GameRules_strategy: strategy.GameRules_strategymanager{
 			DefaultEquipment:                gameR.DefaultEquipment,
 			OTFunds:                         gameR.OTFunds,
@@ -61,7 +62,11 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 		panic(fmt.Sprintf("FATAL: Invalid strategy '%s' for team - this should have been caught during validation!", team.Strategy))
 	}
 
-	return strategyFunc(ctx)
+	invest := strategyFunc(ctx)
+	if err != nil {
+		panic(fmt.Sprintf("FATAL: Error executing strategy '%s': %v", team.Strategy, err))
+	}
+	return invest
 }
 
 //most of the following functions are used to enhance the context for decision making
@@ -70,7 +75,7 @@ func CallStrategy(team *Team, opponent *Team, curround int, isOvertime bool, gam
 //TODO: Clean up these functions and move them to a more appropriate place in the strategy package i.e. into the individual strategies
 
 // Helper functions for enhanced context
-func isPistolRound(round int, halfLength int, isOT bool, OTHalfLength int) bool {
+func IsFirstRoundHalf(round int, halfLength int, isOT bool, OTHalfLength int) bool {
 	if !isOT {
 		return round == 1 || round == halfLength+1
 	} else {
@@ -79,7 +84,7 @@ func isPistolRound(round int, halfLength int, isOT bool, OTHalfLength int) bool 
 
 }
 
-func isAfterPistol(round int, halfLength int, ownScore, opponentScore int, isOT bool, OTHalfLength int) bool {
+func IsSecondRoundHalf(round int, halfLength int, ownScore, opponentScore int, isOT bool, OTHalfLength int) bool {
 	if !isOT {
 		return round == 2 || round == halfLength+2
 	} else {
@@ -103,7 +108,7 @@ func calculateRoundImportance(ownScore, opponentScore, round int, halfLength int
 	importance := 0.5 // Base importance
 
 	// Pistol rounds are always important
-	if isPistolRound(round, halfLength, isOT, OTHalfLength) {
+	if IsFirstRoundHalf(round, halfLength, isOT, OTHalfLength) {
 		importance = 0.8
 	}
 
