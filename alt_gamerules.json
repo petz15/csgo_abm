@@ -8,7 +8,7 @@
   "maxFunds": 80000.0,
   "lossBonusCalc": true,
   "withSaves": false,
-  "lossBonus": [1400.0, 1900.0, 2000.0, 2400.0, 2900.0],
+  "lossBonus": [1400.0, 1900.0, 2400.0, 2900.0, 3400.0],
   "roundOutcomeReward": [3500.0, 3250.0, 3500.0, 3250.0],
   "eliminationReward": 300.0,
   "bombplantRewardall": 800.0,

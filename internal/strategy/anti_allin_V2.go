@@ -39,7 +39,7 @@ func InvestDecisionMaking_anti_allin_v2(ctx StrategyContext_simple) float64 {
 	} else if ctx.ConsecutiveWins >= 2 {
 		ratio := 1 - (float64(ctx.ConsecutiveWins) * 0.05)
 		ratio = math.Max(ratio, 0.4) //set a minimum ratio of 0.4
-		return ctx.Funds * ratio
+		return (ctx.Funds * ratio)
 	}
 
 	//Losing context decision making

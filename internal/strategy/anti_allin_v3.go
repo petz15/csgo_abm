@@ -30,13 +30,8 @@ func InvestDecisionMaking_anti_allin_v3(ctx StrategyContext_simple) float64 {
 	overturn_threshold := config.OverturnThreshold
 	overturn_ratio := config.OverturnRatio
 
-	//always go all in if pistol round (in not OT rounds) or last round of half
+	//always go all in if last round of half or close scores
 	if ctx.IsLastRoundHalf {
-		return ctx.Funds
-	} else if ctx.IsFirstRoundHalf && !ctx.IsOvertime {
-		return ctx.Funds
-	} else if ctx.IsLastRoundHalf && !ctx.IsOvertime && ctx.ConsecutiveLosses < 1 {
-		//also go all in if round after pistol and it is not overtime and we won pistol
 		return ctx.Funds
 	} else if Score_to_Win-ctx.OpponentScore == 2 || Score_to_Win-ctx.OwnScore == 2 {
 		return ctx.Funds
@@ -45,28 +40,22 @@ func InvestDecisionMaking_anti_allin_v3(ctx StrategyContext_simple) float64 {
 	}
 
 	if !ctx.IsOvertime {
-		if ctx.ConsecutiveLosses < 1 {
-			//try to invest accoring to the pressing factor
-			approx_funds := (ctx.GameRules_strategy.LossBonus[ctx.LossBonusLevel_opponent] + ctx.GameRules_strategy.DefaultEquipment) * 5
-			approx_saved_eq := 0.0
-			if ctx.ConsecutiveWins == 1 {
-				approx_saved_eq += float64(ctx.EnemySurvivors) * avgArray(ctx.GameRules_strategy.RoundOutcomeReward[:])
-			} else {
-				approx_saved_eq += float64(ctx.EnemySurvivors) * ctx.GameRules_strategy.LossBonus[int(math.Max(0, float64(ctx.LossBonusLevel_opponent-1)))]
-			}
-			additional_rewards := (5 - float64(ctx.OwnSurvivors)) * ctx.GameRules_strategy.EliminationReward
-
-			if !ctx.GameRules_strategy.WithSaves {
-				approx_saved_eq = 0.0
-			}
-
-			approx_allin_investment := approx_funds + approx_saved_eq + additional_rewards
-
-			return math.Min((ctx.Funds + ctx.Equipment), approx_allin_investment*pressing_ratio)
+		if ctx.IsFirstRoundHalf {
+			return ctx.Funds
+		} else if ctx.IsSecondRoundHalf && ctx.ConsecutiveLosses < 1 {
+			//also go all in if round after pistol and it is not overtime and we won pistol
+			return ctx.Funds
 		}
-
-		approx_funds := (ctx.GameRules_strategy.RoundOutcomeReward[ctx.RoundEndReason-1] + ctx.GameRules_strategy.DefaultEquipment) * 5
-		approx_saved_eq := float64(ctx.EnemySurvivors) * avgArray(ctx.GameRules_strategy.RoundOutcomeReward[:])
+	} else if ctx.IsFirstRoundHalf && ctx.GameRules_strategy.OTFunds > avgArray(ctx.GameRules_strategy.RoundOutcomeReward[:])*2.5 {
+		// try to bait all in strat to spend everything in the first round of overtime
+		//hoping in the consecutive rounds they will have considerably less funds
+		// but only if OT funds are high enough (approx. 2x avg round reward)
+		return 0.0
+	} else if ctx.IsSecondRoundHalf && ctx.ConsecutiveLosses == 1 {
+		//if we lost the first OT round and it is the second round
+		//assume that about 80% of the opponents OT funds remained per survivor + avg round reward
+		approx_funds := (ctx.GameRules_strategy.RoundOutcomeReward[ctx.RoundEndReason-1] + ctx.GameRules_strategy.OTEquipment) * 5
+		approx_saved_eq := float64(ctx.EnemySurvivors) * ((ctx.GameRules_strategy.OTEquipment + ctx.GameRules_strategy.OTEquipment) / 5.0) * 0.9
 		additional_rewards := (5 - float64(ctx.OwnSurvivors)) * ctx.GameRules_strategy.EliminationReward
 
 		if !ctx.GameRules_strategy.WithSaves {
@@ -75,24 +64,46 @@ func InvestDecisionMaking_anti_allin_v3(ctx StrategyContext_simple) float64 {
 
 		approx_allin_investment := approx_funds + approx_saved_eq + additional_rewards
 
-		//if we have enough funds to challenge all in, do it
-		if ctx.Funds+ctx.Equipment >= approx_allin_investment*overturn_threshold {
-			return math.Min((ctx.Funds + ctx.Equipment), approx_allin_investment*overturn_ratio)
-		}
-		//otherwise save until enough funds are built up
-		return 0.0
-
-	} else {
-
-		//if somebody is about to win, go all in
-		if Score_to_Win-ctx.OpponentScore == 1 || Score_to_Win-ctx.OwnScore == 1 {
-			return ctx.Funds
-		} else {
-			//try to divide the funds evenly over the OT rounds
-			return ctx.Funds / float64(ctx.GameRules_strategy.OTHalfLength)
-		}
+		return math.Min((ctx.Funds + ctx.Equipment), approx_allin_investment*pressing_ratio)
 	}
 
+	//Regular time round decision making
+	if ctx.ConsecutiveLosses < 1 {
+		//try to invest accoring to the pressing factor
+		approx_funds := (ctx.GameRules_strategy.LossBonus[ctx.LossBonusLevel_opponent] + ctx.GameRules_strategy.DefaultEquipment) * 5
+		approx_saved_eq := 0.0
+		if ctx.ConsecutiveWins == 1 {
+			approx_saved_eq += float64(ctx.EnemySurvivors) * avgArray(ctx.GameRules_strategy.RoundOutcomeReward[:])
+		} else {
+			approx_saved_eq += float64(ctx.EnemySurvivors) * ctx.GameRules_strategy.LossBonus[int(math.Max(0, float64(ctx.LossBonusLevel_opponent-1)))]
+		}
+		additional_rewards := (5 - float64(ctx.OwnSurvivors)) * ctx.GameRules_strategy.EliminationReward
+
+		if !ctx.GameRules_strategy.WithSaves {
+			approx_saved_eq = 0.0
+		}
+
+		approx_allin_investment := approx_funds + approx_saved_eq + additional_rewards
+
+		return math.Min((ctx.Funds + ctx.Equipment), approx_allin_investment*pressing_ratio)
+	}
+
+	approx_funds := (ctx.GameRules_strategy.RoundOutcomeReward[ctx.RoundEndReason-1] + ctx.GameRules_strategy.DefaultEquipment) * 5
+	approx_saved_eq := float64(ctx.EnemySurvivors) * avgArray(ctx.GameRules_strategy.RoundOutcomeReward[:])
+	additional_rewards := (5 - float64(ctx.OwnSurvivors)) * ctx.GameRules_strategy.EliminationReward
+
+	if !ctx.GameRules_strategy.WithSaves {
+		approx_saved_eq = 0.0
+	}
+
+	approx_allin_investment := approx_funds + approx_saved_eq + additional_rewards
+
+	//if we have enough funds to challenge all in, do it
+	if ctx.Funds+ctx.Equipment >= approx_allin_investment*overturn_threshold {
+		return math.Min((ctx.Funds + ctx.Equipment), approx_allin_investment*overturn_ratio)
+	}
+
+	//otherwise save until enough funds are built up
 	return 0.0
 }
 

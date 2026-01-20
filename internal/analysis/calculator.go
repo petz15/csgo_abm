@@ -19,6 +19,17 @@ func (s *SimulationStats) UpdateGameResult(team1Won bool, team1Score, team2Score
 
 	if wentToOvertime {
 		atomic.AddInt64(&s.OvertimeGames, 1)
+		if team1Won {
+			atomic.AddInt64(&s.Team1OTWins, 1)
+		} else {
+			atomic.AddInt64(&s.Team2OTWins, 1)
+		}
+	} else {
+		if team1Won {
+			atomic.AddInt64(&s.Team1RTWins, 1)
+		} else {
+			atomic.AddInt64(&s.Team2RTWins, 1)
+		}
 	}
 
 }
@@ -47,6 +58,11 @@ func (s *SimulationStats) CalculateFinalStats() {
 	if s.CompletedSims > 0 {
 		s.Team1WinRate = float64(s.Team1Wins) / float64(s.CompletedSims) * 100
 		s.Team2WinRate = float64(s.Team2Wins) / float64(s.CompletedSims) * 100
+		s.Team1OTWinRate = float64(s.Team1OTWins) / float64(s.OvertimeGames) * 100
+		s.Team2OTWinRate = float64(s.Team2OTWins) / float64(s.OvertimeGames) * 100
+		s.Team1RTWinRate = float64(s.Team1RTWins) / float64(s.CompletedSims-s.OvertimeGames) * 100
+		s.Team2RTWinRate = float64(s.Team2RTWins) / float64(s.CompletedSims-s.OvertimeGames) * 100
+
 		s.OvertimeRate = float64(s.OvertimeGames) / float64(s.CompletedSims) * 100
 		s.AverageRounds = float64(s.TotalRounds) / float64(s.CompletedSims)
 

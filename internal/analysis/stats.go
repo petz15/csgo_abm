@@ -18,12 +18,20 @@ type SimulationStats struct {
 	Team2Wins     int64 `json:"team2_wins"`
 	TotalRounds   int64 `json:"total_rounds"`
 	OvertimeGames int64 `json:"overtime_games"`
+	Team1OTWins   int64 `json:"team1_overtime_wins"`
+	Team2OTWins   int64 `json:"team2_overtime_wins"`
+	Team1RTWins   int64 `json:"team1_regular_time_wins"`
+	Team2RTWins   int64 `json:"team2_regular_time_wins"`
 
 	// Calculated metrics
-	Team1WinRate  float64 `json:"team1_win_rate"`
-	Team2WinRate  float64 `json:"team2_win_rate"`
-	AverageRounds float64 `json:"average_rounds"`
-	OvertimeRate  float64 `json:"overtime_rate"`
+	Team1WinRate   float64 `json:"team1_win_rate"`
+	Team2WinRate   float64 `json:"team2_win_rate"`
+	AverageRounds  float64 `json:"average_rounds"`
+	OvertimeRate   float64 `json:"overtime_rate"`
+	Team1OTWinRate float64 `json:"team1_overtime_win_rate"`
+	Team2OTWinRate float64 `json:"team2_overtime_win_rate"`
+	Team1RTWinRate float64 `json:"team1_regular_time_win_rate"`
+	Team2RTWinRate float64 `json:"team2_regular_time_win_rate"`
 
 	// Performance metrics (optional for sequential)
 	ExecutionTime   time.Duration `json:"execution_time"`

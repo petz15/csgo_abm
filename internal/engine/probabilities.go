@@ -56,13 +56,13 @@ func LoadDistributions(filePath string) error {
 	return nil
 }
 
-// IsABMModelsLoaded returns whether distributions have been loaded
-func IsABMModelsLoaded() bool {
+// IsProbabilitiesLoaded returns whether distributions have been loaded
+func IsProbabilitiesLoaded() bool {
 	return distributionsLoaded
 }
 
-// GetABMModels returns the loaded distributions (for testing/debugging)
-func GetABMModels() *ProcessedDistributions {
+// GetProbabilities returns the loaded distributions (for testing/debugging)
+func GetProbabilities() *ProcessedDistributions {
 	return distributions
 }
 
@@ -345,7 +345,7 @@ func oppositeSide(side string) string {
 
 // sampleFromECDFLookup samples from a pre-sorted ECDF lookup table
 func sampleFromECDFLookup(percentiles []PercentileValue, RNG_Eq float64) float64 {
-	randPercentile := RNG_Eq * 100.0
+	randPercentile := (RNG_Eq * 100.0) + 1 //shift by 1 because ECDF starts at 1 and goes to 100
 	result := 0.0
 
 	// Use pre-sorted slice
