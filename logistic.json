@@ -1,0 +1,50 @@
+{
+  "model_type": "logistic_regression_no_buytype",
+  "model_name": "Game Outcome Prediction - LR (No Buy Types)",
+  "description": "Predicts P(CT wins game | scores, equipment, money) - No buy type categorization",
+  "created_at": "2026-01-24T00:45:34.636099",
+  "coefficients": [
+    0.03323021599961706,
+    -0.02947930684056805,
+    0.06270952522749605,
+    -1.0592179857995928e-05,
+    8.271947082484544e-06,
+    -2.466565561326776e-05,
+    2.6261991470160825e-05
+  ],
+  "intercept": -0.03417400298165764,
+  "classes": [
+    0,
+    1
+  ],
+  "features": [
+    "ct_score_start",
+    "t_score_start",
+    "score_diff",
+    "ct_starting_equipment",
+    "t_starting_equipment",
+    "ct_money_start",
+    "t_money_start"
+  ],
+  "feature_count": 7,
+  "performance": {
+    "accuracy": 0.5771868873929997,
+    "roc_auc": 0.6132310911342673,
+    "log_loss": 0.6706517989790676,
+    "test_set_size": 470326
+  },
+  "feature_importance": {
+    "ct_score_start": 0.03323021599961706,
+    "t_score_start": 0.02947930684056805,
+    "score_diff": 0.06270952522749605,
+    "ct_starting_equipment": 1.0592179857995928e-05,
+    "t_starting_equipment": 8.271947082484544e-06,
+    "ct_money_start": 2.466565561326776e-05,
+    "t_money_start": 2.6261991470160825e-05
+  },
+  "performance_vs_buytype_version": {
+    "accuracy_difference": 3.6145141880328246e-05,
+    "roc_auc_difference": -0.00015172179991584933,
+    "log_loss_difference": 9.497377267730922e-05
+  }
+}

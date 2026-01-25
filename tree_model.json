@@ -2,15 +2,96 @@
   "model_type": "decision_tree",
   "tree": {
     "is_leaf": false,
-    "feature": "own_funds",
-    "threshold": 0.002000001957640052,
+    "feature": "own_survivors",
+    "threshold": 0.10000000149011612,
     "left": {
-      "is_leaf": true,
-      "value": 0.0
+      "is_leaf": false,
+      "feature": "own_funds",
+      "threshold": 0.007652137661352754,
+      "left": {
+        "is_leaf": true,
+        "value": 0.8739349999999999
+      },
+      "right": {
+        "is_leaf": false,
+        "feature": "opponent_score",
+        "threshold": 0.15625,
+        "left": {
+          "is_leaf": true,
+          "value": 0.7091350572444501
+        },
+        "right": {
+          "is_leaf": false,
+          "feature": "own_funds",
+          "threshold": 0.0240697143599391,
+          "left": {
+            "is_leaf": false,
+            "feature": "own_funds",
+            "threshold": 0.020435850135982037,
+            "left": {
+              "is_leaf": true,
+              "value": 0.6778059396117384
+            },
+            "right": {
+              "is_leaf": true,
+              "value": 0.6691655084543994
+            }
+          },
+          "right": {
+            "is_leaf": true,
+            "value": 0.6590593809941215
+          }
+        }
+      }
     },
     "right": {
-      "is_leaf": true,
-      "value": 1.0
+      "is_leaf": false,
+      "feature": "own_survivors",
+      "threshold": 0.5000000149011612,
+      "left": {
+        "is_leaf": false,
+        "feature": "own_score",
+        "threshold": 0.90625,
+        "left": {
+          "is_leaf": false,
+          "feature": "score_diff",
+          "threshold": 0.4166666716337204,
+          "left": {
+            "is_leaf": true,
+            "value": 0.8123109194087259
+          },
+          "right": {
+            "is_leaf": false,
+            "feature": "is_ct_side",
+            "threshold": 0.5,
+            "left": {
+              "is_leaf": true,
+              "value": 0.8496083047459795
+            },
+            "right": {
+              "is_leaf": true,
+              "value": 0.9671790046309461
+            }
+          }
+        },
+        "right": {
+          "is_leaf": true,
+          "value": 0.6439346
+        }
+      },
+      "right": {
+        "is_leaf": false,
+        "feature": "own_funds",
+        "threshold": 0.024646669626235962,
+        "left": {
+          "is_leaf": true,
+          "value": 1.0
+        },
+        "right": {
+          "is_leaf": true,
+          "value": 1.0
+        }
+      }
     }
   },
   "state_features": [
@@ -24,7 +105,9 @@
     "round_number",
     "half_length",
     "last_round_reason",
-    "last_bomb_planted"
+    "last_bomb_planted",
+    "own_starting_equipment",
+    "score_diff"
   ],
   "normalization": {
     "own_funds": 999999.0,
@@ -35,6 +118,10 @@
     "consecutive_losses": 5.0,
     "round_number": 30.0,
     "half_length": 15.0,
-    "last_round_reason": 4.0
+    "last_round_reason": 4.0,
+    "own_starting_equipment": 999999.0,
+    "score_diff": 30.0,
+    "opponent_funds": 999999.0,
+    "opponent_starting_equipment": 999999.0
   }
 }

@@ -1,0 +1,40 @@
+{
+  "model_type": "xgboost_no_buytype",
+  "model_name": "Game Outcome Prediction - XGBoost (No Buy Types)",
+  "description": "Predicts P(CT wins game | scores, equipment, money) - No buy type categorization",
+  "created_at": "2026-01-24T00:45:34.654400",
+  "model_file": "xgboost_no_buytype.json",
+  "n_estimators": 100,
+  "max_depth": 6,
+  "learning_rate": 0.1,
+  "features": [
+    "ct_score_start",
+    "t_score_start",
+    "score_diff",
+    "ct_starting_equipment",
+    "t_starting_equipment",
+    "ct_money_start",
+    "t_money_start"
+  ],
+  "feature_count": 7,
+  "performance": {
+    "accuracy": 0.7335677806457649,
+    "roc_auc": 0.8206558434616351,
+    "log_loss": 0.5111185391490605,
+    "test_set_size": 470326
+  },
+  "feature_importance": {
+    "ct_score_start": 0.2602745294570923,
+    "t_score_start": 0.27062156796455383,
+    "score_diff": 0.3588128983974457,
+    "ct_starting_equipment": 0.015727205201983452,
+    "t_starting_equipment": 0.018119441345334053,
+    "ct_money_start": 0.035431742668151855,
+    "t_money_start": 0.04101252928376198
+  },
+  "performance_vs_buytype_version": {
+    "accuracy_difference": 2.764040261438172e-05,
+    "roc_auc_difference": -8.846696588560299e-05,
+    "log_loss_difference": 0.00010449564362091657
+  }
+}

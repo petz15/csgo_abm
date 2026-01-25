@@ -33,10 +33,29 @@ var StrategyRegistry = map[string]StrategyFunc{
 	"half":            InvestDecisionMaking_half,
 
 	// ML-based
-	"ml_dqn":    InvestDecisionMaking_ml_dqn,
-	"ml_sgd":    InvestDecisionMaking_ml_sgd,
-	"ml_tree":   InvestDecisionMaking_ml_tree,
-	"ml_forest": InvestDecisionMaking_ml_forest,
+	"ml_dqn":      InvestDecisionMaking_ml_dqn,
+	"ml_sgd":      InvestDecisionMaking_ml_sgd,
+	"ml_tree":     InvestDecisionMaking_ml_tree,
+	"ml_forest":   InvestDecisionMaking_ml_forest,
+	"ml_xgboost":  InvestDecisionMaking_ml_xgboost,
+	"ml_logistic": InvestDecisionMaking_ml_logistic,
+
+	// ML-based forbidden opponent info
+	"ml_dqn_f":              InvestDecisionMaking_ml_dqn_forbidden,
+	"ml_dqn_forbidden":      InvestDecisionMaking_ml_dqn_forbidden,
+	"ml_sgd_f":              InvestDecisionMaking_ml_sgd_forbidden,
+	"ml_sgd_frobidden":      InvestDecisionMaking_ml_sgd_forbidden,
+	"ml_tree_f":             InvestDecisionMaking_ml_tree_forbidden,
+	"ml_tree_forbidden":     InvestDecisionMaking_ml_tree_forbidden,
+	"ml_forest_f":           InvestDecisionMaking_ml_forest_forbidden,
+	"ml_forest_forbidden":   InvestDecisionMaking_ml_forest_forbidden,
+	"ml_xgboost_f":          InvestDecisionMaking_ml_xgboost_forbidden,
+	"ml_xgboost_forbidden":  InvestDecisionMaking_ml_xgboost_forbidden,
+	"ml_logistic_f":         InvestDecisionMaking_ml_logistic_forbidden,
+	"ml_logistic_forbidden": InvestDecisionMaking_ml_logistic_forbidden,
+
+	//Additional ML-based
+	"ml_xgboost_xen": InvestDecisionMaking_ml_xgboost_xen,
 
 	// Basic
 	"casual":  InvestDecisionMaking_casual,
