@@ -20,6 +20,10 @@ type GameState struct {
 	HalfLength        int
 	LastRoundReason   int
 	LastBombPlanted   bool
+	OwnEquipment      float64
+	ScoreDiff         int
+	OpponentFunds     float64
+	OpponentEquipment float64
 }
 
 func InvestDecisionMaking_ml_dqn(ctx StrategyContext_simple) float64 {
@@ -29,7 +33,7 @@ func InvestDecisionMaking_ml_dqn(ctx StrategyContext_simple) float64 {
 	var modelOnce sync.Once
 
 	modelOnce.Do(func() {
-		model, modelErr = LoadModel("metadata.json", "q_network_weights.json")
+		model, modelErr = LoadModel("ml_models/metadata.json", "ml_models/q_network_weights.json")
 	})
 
 	if modelErr != nil {
@@ -48,6 +52,8 @@ func InvestDecisionMaking_ml_dqn(ctx StrategyContext_simple) float64 {
 		HalfLength:        ctx.GameRules_strategy.HalfLength,
 		LastRoundReason:   ctx.RoundEndReason,
 		LastBombPlanted:   ctx.Is_BombPlanted,
+		OwnEquipment:      ctx.Equipment,
+		ScoreDiff:         ctx.OwnScore - ctx.OpponentScore,
 	}
 
 	action := model.SelectAction(state)
@@ -77,7 +83,18 @@ func (s *GameState) ToArray() []float64 {
 		float64(s.HalfLength) / 15.0,
 		float64(s.LastRoundReason) / 4.0,
 		bombPlanted,
+		s.OwnEquipment / 999999.0,            // own_starting_equipment
+		(float64(s.ScoreDiff) + 15.0) / 30.0, // score_diff
 	}
+}
+
+// ToArrayForbidden converts GameState to extended feature array including opponent info
+func (s *GameState) ToArrayForbidden(opponentFunds float64, opponentEquipment float64) []float64 {
+	baseArray := s.ToArray()
+	return append(baseArray,
+		opponentFunds/999999.0,     // opponent_funds
+		opponentEquipment/999999.0, // opponent_starting_equipment
+	)
 }
 
 // DQNModel represents a trained DQN model
@@ -196,4 +213,42 @@ func (m *DQNModel) SelectAction(game GameState) float64 {
 	}
 
 	return m.ActionValues[maxIdx]
+}
+
+// InvestDecisionMaking_ml_dqn_forbidden uses DQN with extended feature set including opponent info
+func InvestDecisionMaking_ml_dqn_forbidden(ctx StrategyContext_simple) float64 {
+	// Example usage
+	var model *DQNModel
+	var modelErr error
+	var modelOnce sync.Once
+
+	modelOnce.Do(func() {
+		model, modelErr = LoadModel("ml_models/metadata.json", "ml_models/q_network_weights_forbidden.json")
+	})
+
+	if modelErr != nil {
+		panic(modelErr)
+	}
+
+	state := GameState{
+		OwnFunds:          ctx.Funds,
+		OwnScore:          ctx.OwnScore,
+		OpponentScore:     ctx.OpponentScore,
+		OwnSurvivors:      ctx.OwnSurvivors,
+		OpponentSurvivors: ctx.EnemySurvivors,
+		ConsecutiveLosses: ctx.ConsecutiveLosses,
+		IsCTSide:          ctx.Side,
+		RoundNumber:       ctx.CurrentRound,
+		HalfLength:        ctx.GameRules_strategy.HalfLength,
+		LastRoundReason:   ctx.RoundEndReason,
+		LastBombPlanted:   ctx.Is_BombPlanted,
+		OwnEquipment:      ctx.Equipment,
+		ScoreDiff:         ctx.OwnScore - ctx.OpponentScore,
+		OpponentFunds:     ctx.Funds_opponent_forbidden,
+		OpponentEquipment: ctx.Start_Equipment_opponent_forbidden,
+	}
+
+	// For forbidden variant, use extended feature set with opponent info
+	action := model.SelectAction(state)
+	return action * ctx.Funds
 }

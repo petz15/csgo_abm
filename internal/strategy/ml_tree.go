@@ -88,13 +88,26 @@ func (m *TreeModel) prepareInput(ctx StrategyContext_simple) map[string]float64 
 		features["last_bomb_planted"] = 0.0
 	}
 
+	// New features
+	features["score_diff"] = (float64(ctx.OwnScore-ctx.OpponentScore) + 15.0) / 30.0
+	features["equipment"] = ctx.Equipment / 999999.0
+
+	return features
+}
+
+// Prepare input features for forbidden variant (includes opponent info)
+func (m *TreeModel) prepareInputForbidden(ctx StrategyContext_simple) map[string]float64 {
+	features := m.prepareInput(ctx)
+	// Add forbidden features
+	features["opponent_funds"] = ctx.Funds_opponent_forbidden / 999999.0
+	features["opponent_starting_equipment"] = ctx.Start_Equipment_opponent_forbidden / 999999.0
 	return features
 }
 
 // InvestDecisionMaking_ml_tree uses the decision tree model for buy decisions
 func InvestDecisionMaking_ml_tree(ctx StrategyContext_simple) float64 {
 	// Load model (cached after first load)
-	model, err := LoadTreeModel("tree_model.json")
+	model, err := LoadTreeModel("ml_models/tree_model.json")
 	if err != nil {
 		// Fallback to default strategy if model fails to load
 		return InvestDecisionMaking_adaptive_v2(ctx)
@@ -102,6 +115,28 @@ func InvestDecisionMaking_ml_tree(ctx StrategyContext_simple) float64 {
 
 	// Prepare normalized input
 	features := model.prepareInput(ctx)
+
+	// Get prediction (0.0 to 1.0 range representing fraction of funds to spend)
+	prediction := model.predict(features, &model.Tree)
+
+	// Clamp prediction to valid range
+	prediction = math.Max(0.0, math.Min(1.0, prediction))
+
+	// Return investment amount
+	return ctx.Funds * prediction
+}
+
+// InvestDecisionMaking_ml_tree_forbidden uses the decision tree model with extended features
+func InvestDecisionMaking_ml_tree_forbidden(ctx StrategyContext_simple) float64 {
+	// Load model (cached after first load)
+	model, err := LoadTreeModel("ml_models/tree_model_forbidden.json")
+	if err != nil {
+		// Fallback to default strategy if model fails to load
+		return InvestDecisionMaking_adaptive_v2(ctx)
+	}
+
+	// Prepare normalized input with forbidden features
+	features := model.prepareInputForbidden(ctx)
 
 	// Get prediction (0.0 to 1.0 range representing fraction of funds to spend)
 	prediction := model.predict(features, &model.Tree)

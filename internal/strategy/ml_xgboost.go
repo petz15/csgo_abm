@@ -115,56 +115,106 @@ func (m *XGBoostModel) predict(features []float64) float64 {
 
 // Prepare input features as a normalized array
 func (m *XGBoostModel) prepareInput(ctx StrategyContext_simple) []float64 {
-	// Features in order: ct_score_start, t_score_start, score_diff,
-	// ct_starting_equipment, t_starting_equipment, ct_money_start, t_money_start
-	features := make([]float64, 7)
+	// Features: own_funds, own_score, opponent_score, own_survivors,
+	// opponent_survivors, consecutive_losses, is_ct_side, round_number,
+	// half_length, last_round_reason, last_bomb_planted, own_starting_equipment, score_diff
+	features := make([]float64, 13)
 
-	ct_score_start := 0.0
-	t_score_start := 0.0
-	ct_funds := 0.0
-	t_funds := 0.0
-	ct_rs_eq_val := 0.0
-	t_rs_eq_val := 0.0
+	features[0] = ctx.Funds / 999999.0
+	features[1] = float64(ctx.OwnScore) / 16.0
+	features[2] = float64(ctx.OpponentScore) / 16.0
+	features[3] = float64(ctx.OwnSurvivors) / 5.0
+	features[4] = float64(ctx.EnemySurvivors) / 5.0
+	features[5] = float64(ctx.ConsecutiveLosses) / 5.0
 
-	// Determine scores based on side
 	if ctx.Side {
-		ct_score_start = float64(ctx.OwnScore)
-		t_score_start = float64(ctx.OpponentScore)
-		ct_funds = ctx.Funds
-		t_funds = ctx.Funds_opponent_forbidden
-		ct_rs_eq_val = ctx.Equipment
-		t_rs_eq_val = ctx.Start_Equipment_opponent_forbidden
+		features[6] = 1.0
 	} else {
-		ct_score_start = float64(ctx.OpponentScore)
-		t_score_start = float64(ctx.OwnScore)
-		ct_funds = ctx.Funds_opponent_forbidden
-		t_funds = ctx.Funds
-		ct_rs_eq_val = ctx.Start_Equipment_opponent_forbidden
-		t_rs_eq_val = ctx.Equipment
+		features[6] = 0.0
 	}
 
-	features[0] = ct_score_start                 // ct_score_start
-	features[1] = t_score_start                  // t_score_start
-	features[2] = ct_score_start - t_score_start // score_diff
+	features[7] = float64(ctx.CurrentRound) / 30.0
+	features[8] = float64(ctx.GameRules_strategy.HalfLength) / 15.0
+	features[9] = float64(ctx.RoundEndReason) / 4.0
 
-	// Equipment values (simplified - using funds as proxy for equipment value)
-	features[3] = ct_rs_eq_val // ct_starting_equipment proxy
-	features[4] = t_rs_eq_val  // t_starting_equipment proxy (not directly available from context)
+	if ctx.Is_BombPlanted {
+		features[10] = 1.0
+	} else {
+		features[10] = 0.0
+	}
 
-	// Money
-	features[5] = ct_funds // ct_money_start
-	features[6] = t_funds  // t_money_start (not directly available from context)
+	features[11] = ctx.Equipment / 999999.0
+	features[12] = (float64(ctx.OwnScore-ctx.OpponentScore) + 15.0) / 30.0
 
+	return features
+}
+
+// Prepare input features for forbidden variant (includes opponent info)
+func (m *XGBoostModel) prepareInputForbidden(ctx StrategyContext_simple) []float64 {
+	baseFeatures := m.prepareInput(ctx)
+	// Add opponent features
+	features := make([]float64, len(baseFeatures)+2)
+	copy(features, baseFeatures)
+	features[len(baseFeatures)] = ctx.Funds_opponent_forbidden / 999999.0
+	features[len(baseFeatures)+1] = ctx.Start_Equipment_opponent_forbidden / 999999.0
+	return features
+}
+
+// TODO: this needs to be changed i.e. adapted for xen model
+// Prepare input features for forbidden variant (includes opponent info)
+func (m *XGBoostModel) prepareInputXen(ctx StrategyContext_simple) []float64 {
+	baseFeatures := m.prepareInput(ctx)
+	// Add opponent features
+	features := make([]float64, len(baseFeatures)+2)
+	copy(features, baseFeatures)
+	features[len(baseFeatures)] = ctx.Funds_opponent_forbidden / 999999.0
+	features[len(baseFeatures)+1] = ctx.Start_Equipment_opponent_forbidden / 999999.0
 	return features
 }
 
 // InvestDecisionMaking_ml_xgboost uses the XGBoost model for buy decisions
 func InvestDecisionMaking_ml_xgboost(ctx StrategyContext_simple) float64 {
 	// Load model (cached after first load)
-	model, _ := LoadXGBoostModel("xgboost.json")
+	model, _ := LoadXGBoostModel("ml_models/xgboost_model.json")
 
 	// Prepare normalized input
 	features := model.prepareInput(ctx)
+
+	// Get prediction (0.0 to 1.0 probability)
+	prediction := model.predict(features)
+
+	// Clamp prediction to valid range
+	prediction = math.Max(0.0, math.Min(1.0, prediction))
+
+	// Return investment amount (fraction of funds to spend)
+	return ctx.Funds * prediction
+}
+
+// InvestDecisionMaking_ml_xgboost_forbidden uses the XGBoost model with extended features
+func InvestDecisionMaking_ml_xgboost_forbidden(ctx StrategyContext_simple) float64 {
+	// Load model (cached after first load)
+	model, _ := LoadXGBoostModel("ml_models/xgboost_model_forbidden.json")
+
+	// Prepare normalized input with forbidden features
+	features := model.prepareInputForbidden(ctx)
+
+	// Get prediction (0.0 to 1.0 probability)
+	prediction := model.predict(features)
+
+	// Clamp prediction to valid range
+	prediction = math.Max(0.0, math.Min(1.0, prediction))
+
+	// Return investment amount (fraction of funds to spend)
+	return ctx.Funds * prediction
+}
+
+// InvestDecisionMaking_ml_xgboost_forbidden uses the XGBoost model with extended features
+func InvestDecisionMaking_ml_xgboost_xen(ctx StrategyContext_simple) float64 {
+	// Load model (cached after first load)
+	model, _ := LoadXGBoostModel("ml_models/xgboost_model_xen.json")
+
+	// Prepare normalized input with forbidden features
+	features := model.prepareInputXen(ctx)
 
 	// Get prediction (0.0 to 1.0 probability)
 	prediction := model.predict(features)

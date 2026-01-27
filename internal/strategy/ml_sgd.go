@@ -80,7 +80,7 @@ func (m *SGDModel) predict(input []float64) float64 {
 
 // Normalize and prepare input features
 func (m *SGDModel) prepareInput(ctx StrategyContext_simple) []float64 {
-	input := make([]float64, 11)
+	input := make([]float64, 13)
 
 	// Normalize features according to the model's normalization
 	input[0] = ctx.Funds / m.Normalization["own_funds"]
@@ -108,13 +108,28 @@ func (m *SGDModel) prepareInput(ctx StrategyContext_simple) []float64 {
 		input[10] = 0.0
 	}
 
+	// New features
+	input[11] = (float64(ctx.OwnScore-ctx.OpponentScore) + 15.0) / 30.0 // score_diff
+	input[12] = ctx.Equipment / 999999.0                                // equipment
+
+	return input
+}
+
+// Normalize and prepare input features for forbidden variant (includes opponent info)
+func (m *SGDModel) prepareInputForbidden(ctx StrategyContext_simple) []float64 {
+	baseInput := m.prepareInput(ctx)
+	input := make([]float64, len(baseInput)+2)
+	copy(input, baseInput)
+	// Add opponent features
+	input[len(baseInput)] = ctx.Funds_opponent_forbidden / 999999.0
+	input[len(baseInput)+1] = ctx.Start_Equipment_opponent_forbidden / 999999.0
 	return input
 }
 
 // InvestDecisionMaking_ml_sgd uses the SGD neural network model for buy decisions
 func InvestDecisionMaking_ml_sgd(ctx StrategyContext_simple) float64 {
 	// Load model (cached after first load)
-	model, err := LoadSGDModel("sgd_model.json")
+	model, err := LoadSGDModel("ml_models/sgd_model.json")
 	if err != nil {
 		// Fallback to default strategy if model fails to load
 		return InvestDecisionMaking_adaptive_v2(ctx)
@@ -122,6 +137,28 @@ func InvestDecisionMaking_ml_sgd(ctx StrategyContext_simple) float64 {
 
 	// Prepare normalized input
 	input := model.prepareInput(ctx)
+
+	// Get prediction (0.0 to 1.0 range representing fraction of funds to spend)
+	prediction := model.predict(input)
+
+	// Clamp prediction to valid range
+	prediction = math.Max(0.0, math.Min(1.0, prediction))
+
+	// Return investment amount
+	return ctx.Funds * prediction
+}
+
+// InvestDecisionMaking_ml_sgd_forbidden uses the SGD neural network model with extended features
+func InvestDecisionMaking_ml_sgd_forbidden(ctx StrategyContext_simple) float64 {
+	// Load model (cached after first load)
+	model, err := LoadSGDModel("ml_models/sgd_model_forbidden.json")
+	if err != nil {
+		// Fallback to default strategy if model fails to load
+		return InvestDecisionMaking_adaptive_v2(ctx)
+	}
+
+	// Prepare normalized input with forbidden features
+	input := model.prepareInputForbidden(ctx)
 
 	// Get prediction (0.0 to 1.0 range representing fraction of funds to spend)
 	prediction := model.predict(input)

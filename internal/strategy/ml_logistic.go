@@ -71,56 +71,51 @@ func (m *LogisticRegressionModel) predict(features []float64) float64 {
 }
 
 // Prepare input features as a normalized array
-// Features expected: ct_score_start, t_score_start, score_diff, ct_starting_equipment,
-// t_starting_equipment, ct_money_start, t_money_start
+// Now uses the same feature set as other models
 func (m *LogisticRegressionModel) prepareInput(ctx StrategyContext_simple) []float64 {
-	features := make([]float64, 7)
+	features := make([]float64, 13)
 
-	// Feature indices match the model's features array:
-	// 0: ct_score_start
-	// 1: t_score_start
-	// 2: score_diff
-	// 3: ct_starting_equipment
-	// 4: t_starting_equipment
-	// 5: ct_money_start
-	// 6: t_money_start
+	// Features: own_funds, own_score, opponent_score, own_survivors,
+	// opponent_survivors, consecutive_losses, is_ct_side, round_number,
+	// half_length, last_round_reason, last_bomb_planted, own_starting_equipment, score_diff
 
-	ct_score_start := 0.0
-	t_score_start := 0.0
-	ct_funds := 0.0
-	t_funds := 0.0
-	ct_rs_eq_val := 0.0
-	t_rs_eq_val := 0.0
+	features[0] = ctx.Funds / 999999.0
+	features[1] = float64(ctx.OwnScore) / 16.0
+	features[2] = float64(ctx.OpponentScore) / 16.0
+	features[3] = float64(ctx.OwnSurvivors) / 5.0
+	features[4] = float64(ctx.EnemySurvivors) / 5.0
+	features[5] = float64(ctx.ConsecutiveLosses) / 5.0
 
-	// Determine scores based on side
 	if ctx.Side {
-		ct_score_start = float64(ctx.OwnScore)
-		t_score_start = float64(ctx.OpponentScore)
-		ct_funds = ctx.Funds
-		t_funds = ctx.Funds_opponent_forbidden
-		ct_rs_eq_val = ctx.Equipment
-		t_rs_eq_val = ctx.Start_Equipment_opponent_forbidden
+		features[6] = 1.0
 	} else {
-		ct_score_start = float64(ctx.OpponentScore)
-		t_score_start = float64(ctx.OwnScore)
-		ct_funds = ctx.Funds_opponent_forbidden
-		t_funds = ctx.Funds
-		ct_rs_eq_val = ctx.Start_Equipment_opponent_forbidden
-		t_rs_eq_val = ctx.Equipment
+		features[6] = 0.0
 	}
 
-	features[0] = ct_score_start                 // ct_score_start
-	features[1] = t_score_start                  // t_score_start
-	features[2] = ct_score_start - t_score_start // score_diff
+	features[7] = float64(ctx.CurrentRound) / 30.0
+	features[8] = float64(ctx.GameRules_strategy.HalfLength) / 15.0
+	features[9] = float64(ctx.RoundEndReason) / 4.0
 
-	// Equipment values (simplified - using funds as proxy for equipment value)
-	features[3] = ct_rs_eq_val // ct_starting_equipment proxy
-	features[4] = t_rs_eq_val  // t_starting_equipment proxy (not directly available from context)
+	if ctx.Is_BombPlanted {
+		features[10] = 1.0
+	} else {
+		features[10] = 0.0
+	}
 
-	// Money
-	features[5] = ct_funds // ct_money_start
-	features[6] = t_funds  // t_money_start (not directly available from context)
+	features[11] = ctx.Equipment / 999999.0
+	features[12] = (float64(ctx.OwnScore-ctx.OpponentScore) + 15.0) / 30.0
 
+	return features
+}
+
+// Prepare input features for forbidden variant (includes opponent info)
+func (m *LogisticRegressionModel) prepareInputForbidden(ctx StrategyContext_simple) []float64 {
+	baseFeatures := m.prepareInput(ctx)
+	// Add opponent features
+	features := make([]float64, len(baseFeatures)+2)
+	copy(features, baseFeatures)
+	features[len(baseFeatures)] = ctx.Funds_opponent_forbidden / 999999.0
+	features[len(baseFeatures)+1] = ctx.Start_Equipment_opponent_forbidden / 999999.0
 	return features
 }
 
@@ -128,7 +123,7 @@ func (m *LogisticRegressionModel) prepareInput(ctx StrategyContext_simple) []flo
 // Predicts P(CT wins | game state) and uses as investment fraction
 func InvestDecisionMaking_ml_logistic(ctx StrategyContext_simple) float64 {
 	// Load model (cached after first load)
-	model, err := LoadLogisticModel("logistic.json")
+	model, err := LoadLogisticModel("ml_models/logistic_model.json")
 	if err != nil {
 		// Fallback to adaptive strategy if model fails to load
 		return InvestDecisionMaking_adaptive_v2(ctx)
@@ -136,6 +131,34 @@ func InvestDecisionMaking_ml_logistic(ctx StrategyContext_simple) float64 {
 
 	// Prepare normalized input
 	features := model.prepareInput(ctx)
+
+	// Get prediction (probability CT wins - 0.0 to 1.0)
+	prediction := model.predict(features)
+
+	// Clamp prediction to valid range
+	prediction = math.Max(0.0, math.Min(1.0, prediction))
+
+	if !ctx.Side {
+		// If team is T, invert prediction to get P(T wins)
+		prediction = 1.0 - prediction
+	}
+
+	// Return investment amount based on win probability
+	// Higher win probability -> invest more aggressively
+	return ctx.Funds * prediction
+}
+
+// InvestDecisionMaking_ml_logistic_forbidden uses logistic regression with extended features
+func InvestDecisionMaking_ml_logistic_forbidden(ctx StrategyContext_simple) float64 {
+	// Load model (cached after first load)
+	model, err := LoadLogisticModel("ml_models/logistic_model_forbidden.json")
+	if err != nil {
+		// Fallback to adaptive strategy if model fails to load
+		return InvestDecisionMaking_adaptive_v2(ctx)
+	}
+
+	// Prepare normalized input with forbidden features
+	features := model.prepareInputForbidden(ctx)
 
 	// Get prediction (probability CT wins - 0.0 to 1.0)
 	prediction := model.predict(features)

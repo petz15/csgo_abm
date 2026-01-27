@@ -1,0 +1,75 @@
+{
+  "model_type": "xgboost",
+  "model_name": "Game Outcome Prediction - XGBoost",
+  "description": "Predicts P(CT wins game | game state at round i)",
+  "created_at": "2026-01-27T09:44:16.074359",
+  "model_file": "xgboost_model.json",
+  "n_estimators": 100,
+  "max_depth": 6,
+  "learning_rate": 0.1,
+  "features": [
+    "ct_score_start",
+    "t_score_start",
+    "score_diff",
+    "ct_starting_equipment",
+    "t_starting_equipment",
+    "ct_money_start",
+    "t_money_start",
+    "ct_buy_encoded",
+    "t_buy_encoded"
+  ],
+  "feature_count": 9,
+  "ct_buy_encoder": {
+    "classes": [
+      "Eco",
+      "Full Buy",
+      "Half Buy",
+      "Hero Half Buy",
+      "Hero Low Buy",
+      "Low Buy"
+    ],
+    "mapping": {
+      "0": "Eco",
+      "1": "Full Buy",
+      "2": "Half Buy",
+      "3": "Hero Half Buy",
+      "4": "Hero Low Buy",
+      "5": "Low Buy"
+    }
+  },
+  "t_buy_encoder": {
+    "classes": [
+      "Eco",
+      "Full Buy",
+      "Half Buy",
+      "Hero Half Buy",
+      "Hero Low Buy",
+      "Low Buy"
+    ],
+    "mapping": {
+      "0": "Eco",
+      "1": "Full Buy",
+      "2": "Half Buy",
+      "3": "Hero Half Buy",
+      "4": "Hero Low Buy",
+      "5": "Low Buy"
+    }
+  },
+  "performance": {
+    "accuracy": 0.7335401402431505,
+    "roc_auc": 0.8207443104275207,
+    "log_loss": 0.5110140435054396,
+    "test_set_size": 470326
+  },
+  "feature_importance": {
+    "ct_score_start": 0.24323490262031555,
+    "t_score_start": 0.27480119466781616,
+    "score_diff": 0.353758841753006,
+    "ct_starting_equipment": 0.016848666593432426,
+    "t_starting_equipment": 0.01627713069319725,
+    "ct_money_start": 0.03485497087240219,
+    "t_money_start": 0.041962552815675735,
+    "ct_buy_encoded": 0.006130989640951157,
+    "t_buy_encoded": 0.01213066652417183
+  }
+}
