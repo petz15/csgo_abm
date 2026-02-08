@@ -1,0 +1,5 @@
+{
+  "pressing_ratio": 1.2,
+  "overturn_threshold": 0.5,
+  "overturn_ratio": 0.9
+}

@@ -107,9 +107,31 @@ func loadAndProcessDistributions(filePath string) (*ProcessedDistributions, erro
 		}
 	}
 
+	// Check if file is empty
+	if len(data) == 0 {
+		return nil, fmt.Errorf("distributions file is empty")
+	}
+
 	var raw rawDistributions
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal distributions file: %w", err)
+	}
+
+	// Check if distributions are present
+	if len(raw.Distributions.RoundEndReason) == 0 {
+		return nil, fmt.Errorf("distributions file does not contain round end reason data")
+	}
+	if len(raw.Distributions.Survivors) == 0 {
+		return nil, fmt.Errorf("distributions file does not contain survivors data")
+	}
+	if len(raw.Distributions.EquipmentSaved) == 0 {
+		return nil, fmt.Errorf("distributions file does not contain equipment saved data")
+	}
+	if len(raw.Distributions.BombPlanted.T) == 0 {
+		return nil, fmt.Errorf("distributions file does not contain bomb planted data")
+	}
+	if raw.Metadata.CSFRValue < 0 {
+		return nil, fmt.Errorf("distributions file does not contain valid CSF R value")
 	}
 
 	processed := &ProcessedDistributions{

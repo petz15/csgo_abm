@@ -16,9 +16,10 @@ var StrategyRegistry = map[string]StrategyFunc{
 	"all_in_v2": InvestDecisionMaking_allin_v2,
 
 	// Counter
-	"anti_allin":    InvestDecisionMaking_anti_allin,
-	"anti_allin_v2": InvestDecisionMaking_anti_allin_v2,
-	"anti_allin_v3": InvestDecisionMaking_anti_allin_v3,
+	"anti_allin":         InvestDecisionMaking_anti_allin,
+	"anti_allin_v2":      InvestDecisionMaking_anti_allin_v2,
+	"anti_allin_v3":      InvestDecisionMaking_anti_allin_v3,
+	"anti_allin_v3_copy": InvestDecisionMaking_anti_allin_v3_copy,
 
 	// Optimized
 	"min_max":        InvestDecisionMaking_min_max,
@@ -55,7 +56,7 @@ var StrategyRegistry = map[string]StrategyFunc{
 	"ml_logistic_forbidden": InvestDecisionMaking_ml_logistic_forbidden,
 
 	//Additional ML-based
-	"ml_xgboost_xen": InvestDecisionMaking_ml_xgboost_xen,
+	"xen_model": InvestDecisionMaking_xen_model,
 
 	// Basic
 	"casual":  InvestDecisionMaking_casual,

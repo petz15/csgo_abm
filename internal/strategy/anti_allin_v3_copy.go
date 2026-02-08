@@ -8,18 +8,18 @@ import (
 )
 
 // Configuration struct for anti_allin_v3 strategy parameters
-type AntiAllinV3Config struct {
+type AntiAllinV3Config_copy struct {
 	PressingRatio     float64 `json:"pressing_ratio"`
 	OverturnThreshold float64 `json:"overturn_threshold"`
 	OverturnRatio     float64 `json:"overturn_ratio"`
 }
 
 var (
-	antiAllinV3Config     AntiAllinV3Config
-	antiAllinV3ConfigOnce sync.Once
+	antiAllinV3Config_copy     AntiAllinV3Config_copy
+	antiAllinV3ConfigOnce_copy sync.Once
 )
 
-func InvestDecisionMaking_anti_allin_v3(ctx StrategyContext_simple) float64 {
+func InvestDecisionMaking_anti_allin_v3_copy(ctx StrategyContext_simple) float64 {
 
 	// anti_allin_v3, invests all in the beginning and end of halves/overtime. In between it tries to build up wealth
 	Score_to_Win := ctx.GameRules_strategy.HalfLength + (ctx.GameRules_strategy.OTHalfLength * (ctx.OvertimeAmount)) + 1
@@ -107,26 +107,26 @@ func InvestDecisionMaking_anti_allin_v3(ctx StrategyContext_simple) float64 {
 	return 0.0
 }
 
-func getAntiAllinV3Config() AntiAllinV3Config {
-	antiAllinV3ConfigOnce.Do(func() {
-		antiAllinV3Config = loadAntiAllinV3Config()
+func getAntiAllinV3Config_copy() AntiAllinV3Config_copy {
+	antiAllinV3ConfigOnce_copy.Do(func() {
+		antiAllinV3Config_copy = loadAntiAllinV3Config_copy()
 	})
-	return antiAllinV3Config
+	return antiAllinV3Config_copy
 }
 
-func loadAntiAllinV3Config() AntiAllinV3Config {
+func loadAntiAllinV3Config_copy() AntiAllinV3Config_copy {
 	// Default fallback values
-	defaultConfig := AntiAllinV3Config{
-		PressingRatio:     1.05,
-		OverturnThreshold: 0.2,
+	defaultConfig := AntiAllinV3Config_copy{
+		PressingRatio:     1.15,
+		OverturnThreshold: 0.3,
 		OverturnRatio:     0.8,
 	}
 
 	// Try to load from JSON file
 	configPaths := []string{
-		"configs/anti_allin_v3.json",
-		"config/anti_allin_v3.json",
-		"anti_allin_v3.json",
+		"configs/anti_allin_v3_copy.json",
+		"config/anti_allin_v3_copy.json",
+		"anti_allin_v3_copy.json",
 	}
 
 	for _, path := range configPaths {
@@ -135,7 +135,7 @@ func loadAntiAllinV3Config() AntiAllinV3Config {
 			continue // Try next path
 		}
 
-		var config AntiAllinV3Config
+		var config AntiAllinV3Config_copy
 		if err := json.Unmarshal(data, &config); err != nil {
 			continue // Try next path or use defaults
 		}

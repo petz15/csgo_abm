@@ -160,18 +160,6 @@ func (m *XGBoostModel) prepareInputForbidden(ctx StrategyContext_simple) []float
 	return features
 }
 
-// TODO: this needs to be changed i.e. adapted for xen model
-// Prepare input features for forbidden variant (includes opponent info)
-func (m *XGBoostModel) prepareInputXen(ctx StrategyContext_simple) []float64 {
-	baseFeatures := m.prepareInput(ctx)
-	// Add opponent features
-	features := make([]float64, len(baseFeatures)+2)
-	copy(features, baseFeatures)
-	features[len(baseFeatures)] = ctx.Funds_opponent_forbidden / 999999.0
-	features[len(baseFeatures)+1] = ctx.Start_Equipment_opponent_forbidden / 999999.0
-	return features
-}
-
 // InvestDecisionMaking_ml_xgboost uses the XGBoost model for buy decisions
 func InvestDecisionMaking_ml_xgboost(ctx StrategyContext_simple) float64 {
 	// Load model (cached after first load)
@@ -197,24 +185,6 @@ func InvestDecisionMaking_ml_xgboost_forbidden(ctx StrategyContext_simple) float
 
 	// Prepare normalized input with forbidden features
 	features := model.prepareInputForbidden(ctx)
-
-	// Get prediction (0.0 to 1.0 probability)
-	prediction := model.predict(features)
-
-	// Clamp prediction to valid range
-	prediction = math.Max(0.0, math.Min(1.0, prediction))
-
-	// Return investment amount (fraction of funds to spend)
-	return ctx.Funds * prediction
-}
-
-// InvestDecisionMaking_ml_xgboost_forbidden uses the XGBoost model with extended features
-func InvestDecisionMaking_ml_xgboost_xen(ctx StrategyContext_simple) float64 {
-	// Load model (cached after first load)
-	model, _ := LoadXGBoostModel("ml_models/xgboost_model_xen.json")
-
-	// Prepare normalized input with forbidden features
-	features := model.prepareInputXen(ctx)
 
 	// Get prediction (0.0 to 1.0 probability)
 	prediction := model.predict(features)
