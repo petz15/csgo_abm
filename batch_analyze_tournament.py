@@ -83,14 +83,14 @@ def main():
 Examples:
   python batch_analyze_tournament.py results_20260105_123550
   python batch_analyze_tournament.py results_20260105_123550 --workers 8
-  python batch_analyze_tournament.py results_20260105_123550 --notebook analysis_notebook.ipynb
+  python batch_analyze_tournament.py results_20260105_123550 --notebook EGTA.ipynb
 ''')
     
     parser.add_argument('tournament_folder', 
                         help='Path to the tournament results folder containing matchup_XXX subdirectories')
     parser.add_argument('--notebook', '-n',
-                        default='analysis_notebook_v2.ipynb',
-                        help='Path to the Jupyter notebook to execute (default: analysis_notebook_v2.ipynb)')
+                        default='EGTA.ipynb',
+                        help='Path to the Jupyter notebook to execute (default: EGTA.ipynb)')
     parser.add_argument('--workers', '-w',
                         type=int,
                         default=4,
