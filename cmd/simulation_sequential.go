@@ -175,19 +175,20 @@ func sequentialsimulation(config SimulationConfig, gameRules engine.GameRules) e
 
 	// Advanced analysis removed
 
-	// Export summary statistics
-	if config.ExportDetailedResults {
-		summaryPath := fmt.Sprintf("%s/simulation_summary.json", config.Exportpath)
-		exportSummary_v2(stats, summaryPath)
+	// Export summary statistics (always export to simulation_summary.json)
+	summaryPath := fmt.Sprintf("%s/simulation_summary.json", config.Exportpath)
+	if err := exportSummary_v2(stats, summaryPath); err != nil {
 		if !config.SuppressOutput {
-			fmt.Printf("\nResults exported to: %s/\n", config.Exportpath)
-			fmt.Printf("- Individual game results: %d JSON files\n", stats.CompletedSims)
-			fmt.Println("- Summary statistics: simulation_summary.json")
+			fmt.Printf("Warning: Failed to export summary: %v\n", err)
 		}
-	} else {
-		// Use original export method for single file
-		simID := util.CreateGameID()
-		exportSummary_v2(stats, simID)
+	}
+
+	if !config.SuppressOutput {
+		fmt.Printf("\nResults exported to: %s/\n", config.Exportpath)
+		if config.ExportDetailedResults {
+			fmt.Printf("- Individual game results: %d JSON files\n", stats.CompletedSims)
+		}
+		fmt.Println("- Summary statistics: simulation_summary.json")
 	}
 
 	return nil

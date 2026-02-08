@@ -63,15 +63,21 @@ func ExportTournamentSummary(dir string, matches []tournament.MatchSpec, series 
 	for _, ser := range series {
 		i := idx[ser.Match.Team1Strategy]
 		j := idx[ser.Match.Team2Strategy]
+		team1Wins := 0
+		team2Wins := 0
 		for _, g := range ser.GameResults {
-			totals[i][j]++
-			totals[j][i]++
 			if g.T1Wins {
-				wins[i][j]++
+				team1Wins++
 			} else {
-				wins[j][i]++
+				team2Wins++
 			}
 		}
+		totalGames := team1Wins + team2Wins
+		// Populate both cells symmetrically
+		totals[i][j] = totalGames
+		totals[j][i] = totalGames
+		wins[i][j] = team1Wins
+		wins[j][i] = team2Wins
 	}
 
 	mf, err := os.Create(filepath.Join(dir, "tournament_matrix.csv"))
