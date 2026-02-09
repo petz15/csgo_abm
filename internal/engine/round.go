@@ -13,7 +13,7 @@ type Round struct {
 	game           *Game      `json:"-"` // Don't export game rules
 }
 
-func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, gamerules *GameRules, ot bool, g *Game) *Round {
+func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, gamerules *GameRules, ot bool, g *Game) *Round {
 
 	if roundNumber != 1 { //avoid calling NewRound on first round twice
 		T1.NewRound(gamerules.DefaultEquipment)
@@ -23,11 +23,34 @@ func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, sidewitch bool, 
 	return &Round{
 		RoundNumber: roundNumber,
 		IsT1CT:      ctteam,
-		Sideswitch:  sidewitch,
+		Sideswitch:  false,
 		gameRules:   gamerules,
 		OT:          ot,
 		game:        g,
 	}
+}
+
+// HandleSideSwitch manages side switching at halftime
+func (r *Round) HandleSideSwitch(Team1 *Team, Team2 *Team) {
+	r.Sideswitch = true
+	r.IsT1CT = !r.IsT1CT
+	Team1.Sideswitch(r.OT, r.gameRules.StartingFunds, r.gameRules.DefaultEquipment, r.gameRules.OTFunds, r.gameRules.OTEquipment)
+	Team2.Sideswitch(r.OT, r.gameRules.StartingFunds, r.gameRules.DefaultEquipment, r.gameRules.OTFunds, r.gameRules.OTEquipment)
+}
+
+// HandleOTStart manages the start of overtime
+func (r *Round) HandleOTStart(Team1 *Team, Team2 *Team) {
+	r.OT = true
+	Team1.NewOT(r.gameRules.OTFunds, r.gameRules.OTEquipment)
+	Team2.NewOT(r.gameRules.OTFunds, r.gameRules.OTEquipment)
+}
+
+// HandleOTSideSwitch manages side switching during overtime
+func (r *Round) HandleOTSideSwitch(Team1 *Team, Team2 *Team) {
+	r.Sideswitch = true
+	r.IsT1CT = !r.IsT1CT
+	Team1.Sideswitch(true, r.gameRules.StartingFunds, r.gameRules.DefaultEquipment, r.gameRules.OTFunds, r.gameRules.OTEquipment)
+	Team2.Sideswitch(true, r.gameRules.StartingFunds, r.gameRules.DefaultEquipment, r.gameRules.OTFunds, r.gameRules.OTEquipment)
 }
 
 // solution for what information gets passed to the teams, could be a json file in the gamerules which specifies

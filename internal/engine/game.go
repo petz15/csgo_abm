@@ -66,9 +66,24 @@ func (g *Game) Start() {
 
 	for g.GameinProgress {
 
-		round := NewRound(g.Team1, g.Team2, g.CurrentRound, g.is_T1_CT, g.sideswitch, &g.GameRules, g.OT, g)
+		round := NewRound(g.Team1, g.Team2, g.CurrentRound, g.is_T1_CT, &g.GameRules, g.OT, g)
 
-		g.GameState()
+		// Handle side switches and OT transitions
+		if g.CurrentRound == g.GameRules.HalfLength+1 {
+			// Regular halftime side switch
+			round.HandleSideSwitch(g.Team1, g.Team2)
+			g.is_T1_CT = !g.is_T1_CT
+			g.firsthalf = !g.firsthalf
+		} else if g.CurrentRound == (g.GameRules.HalfLength*2)+1 || (g.OT && g.CurrentRound == ((g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength*2)+1)) {
+			// Start of overtime
+			g.OT = true
+			g.OTcounter++
+			round.HandleOTStart(g.Team1, g.Team2)
+		} else if g.OT && g.CurrentRound == (g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength)+1 {
+			// OT halftime side switch
+			round.HandleOTSideSwitch(g.Team1, g.Team2)
+			g.is_T1_CT = !g.is_T1_CT
+		}
 
 		round.BuyPhase(g.Team1, g.Team2)
 
@@ -83,34 +98,11 @@ func (g *Game) Start() {
 		// Clear round pointer to help GC
 		round = nil
 
-		g.sideswitch = false
 		g.CurrentRound++
 		g.GameFinished()
 
 	}
 
-}
-
-func (g *Game) GameState() {
-	if g.CurrentRound == g.GameRules.HalfLength+1 {
-		g.switchSide()
-	} else if g.CurrentRound == (g.GameRules.HalfLength*2)+1 || (g.OT && g.CurrentRound == ((g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength*2)+1)) {
-		g.OT = true
-		g.OTcounter++
-		g.Team1.NewOT(g.GameRules.OTFunds, g.GameRules.OTEquipment)
-		g.Team2.NewOT(g.GameRules.OTFunds, g.GameRules.OTEquipment)
-	} else if g.OT && g.CurrentRound == (g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength)+1 {
-		g.switchSide()
-	}
-
-}
-
-func (g *Game) switchSide() {
-	g.sideswitch = true
-	g.firsthalf = !g.firsthalf
-	g.is_T1_CT = !g.is_T1_CT
-	g.Team1.Sideswitch(g.OT, g.GameRules.StartingFunds, g.GameRules.DefaultEquipment, g.GameRules.OTFunds, g.GameRules.OTEquipment)
-	g.Team2.Sideswitch(g.OT, g.GameRules.StartingFunds, g.GameRules.DefaultEquipment, g.GameRules.OTFunds, g.GameRules.OTEquipment)
 }
 
 func (g *Game) GameFinished() {

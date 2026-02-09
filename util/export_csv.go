@@ -479,7 +479,7 @@ func ExportAllGamesMinimalCSV(games []*engine.Game, path string) error {
 				fmt.Sprintf("%d", round.RoundNumber),
 				fmt.Sprintf("%t", round.IsT1WinnerTeam),
 				fmt.Sprintf("%t", round.IsT1CT),
-				fmt.Sprintf("%t", game.OT),
+				fmt.Sprintf("%t", round.OT),
 				fmt.Sprintf("%d", round.Calc_Outcome.ReasonCode),
 				fmt.Sprintf("%t", round.Calc_Outcome.BombPlanted),
 				fmt.Sprintf("%d", t1.Score_Start),

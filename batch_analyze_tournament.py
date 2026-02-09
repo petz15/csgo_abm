@@ -33,7 +33,7 @@ def find_matchup_folders(tournament_folder):
     
     return matchup_folders
 
-def analyze_matchup(matchup_folder, notebook_path):
+def analyze_matchup(matchup_folder, notebook_path, ENABLE_FIRST_ROUND_ANALYSIS=False):
     """
     Analyze a single matchup by executing the notebook with papermill.
     The notebook handles its own export and filename generation.
@@ -56,6 +56,7 @@ def analyze_matchup(matchup_folder, notebook_path):
                 'FOLDER_PATH': folder_path,
                 'CSV_FILE_PATH': csv_path,
                 'CSV_INFO_FILE_PATH': json_path,
+                'ENABLE_FIRST_ROUND_ANALYSIS': ENABLE_FIRST_ROUND_ANALYSIS,  # Disable first round analysis for batch processing
             },
             cwd=str(matchup_folder.parent),
             progress_bar=False,
@@ -66,10 +67,18 @@ def analyze_matchup(matchup_folder, notebook_path):
         return (True, matchup_name, None)
             
     except pm.PapermillExecutionError as e:
-        # Extract the relevant error information
-        error_msg = str(e)
-        if len(error_msg) > 500:
-            error_msg = error_msg[-500:]
+        # Extract the relevant error information with full traceback
+        error_msg = f"{e.ename}: {e.evalue}" if hasattr(e, 'ename') else str(e)
+        
+        # Add traceback information for better debugging
+        if hasattr(e, 'traceback'):
+            error_msg += f"\n\nTraceback:\n{e.traceback}"
+        
+        # Add cell execution info if available
+        if hasattr(e, 'exec_count'):
+            error_msg += f"\n\nFailed at cell: {e.exec_count}"
+        
+        # Don't truncate - we need full error for debugging
         return (False, matchup_name, error_msg)
     except Exception as e:
         return (False, matchup_name, str(e))
@@ -95,13 +104,17 @@ Examples:
                         type=int,
                         default=4,
                         help='Number of parallel workers (default: 4)')
-    
+    parser.add_argument('--enable-first-round-analysis', '-f',
+                        action='store_true',
+                        default=False,
+                        help='Enable first round analysis in the notebook')
     args = parser.parse_args()
     
     # Configuration from arguments
     TOURNAMENT_FOLDER = args.tournament_folder
     NOTEBOOK_PATH = Path(args.notebook).resolve()  # Convert to absolute path
     MAX_WORKERS = args.workers
+    ENABLE_FIRST_ROUND_ANALYSIS = args.enable_first_round_analysis  # Set based on command line argument
     
     # Validate inputs
     if not Path(TOURNAMENT_FOLDER).exists():
@@ -138,7 +151,7 @@ Examples:
     with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
         # Submit all jobs
         futures = {
-            executor.submit(analyze_matchup, folder, NOTEBOOK_PATH): folder 
+            executor.submit(analyze_matchup, folder, NOTEBOOK_PATH, ENABLE_FIRST_ROUND_ANALYSIS): folder 
             for folder in matchup_folders
         }
         
@@ -155,7 +168,8 @@ Examples:
                     failed.append((name, error))
                     print(f"✗ [{i}/{len(matchup_folders)}] {name} - FAILED")
                     if error:
-                        print(f"    Error: {error[:100]}")
+                        # Print full error for debugging
+                        print(f"    Error: {error}")
             except Exception as e:
                 failed.append((folder.name, str(e)))
                 print(f"✗ [{i}/{len(matchup_folders)}] {folder.name} - EXCEPTION: {e}")
@@ -174,10 +188,12 @@ Examples:
     
     if failed:
         print(f"\n✗ Failed matchups:")
-        for name, error in failed[:10]:  # Show first 10 failures
-            print(f"  - {name}: {error[:100]}")
-        if len(failed) > 10:
-            print(f"  ... and {len(failed) - 10} more")
+        for name, error in failed:  # Show ALL failures with full details
+            print(f"\n{'='*80}")
+            print(f"MATCHUP: {name}")
+            print(f"{'='*80}")
+            print(error)
+            print(f"{'='*80}")
     
     return 0 if not failed else 2  # Exit code 2 if some analyses failed
 
