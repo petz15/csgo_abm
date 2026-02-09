@@ -29,11 +29,11 @@ func RoundRobinSchedule(strategies []string) []MatchSpec {
 				Team1Strategy: strategies[i],
 				Team2Strategy: strategies[j],
 			})
-			// B vs A (for balance, though starting side is randomized)
-			matches = append(matches, MatchSpec{
-				Team1Strategy: strategies[j],
-				Team2Strategy: strategies[i],
-			})
+			// B vs A (for balance, though starting side is randomized) -> not necessary, one is enough since sides are randomized in each game
+			// matches = append(matches, MatchSpec{
+			// 	Team1Strategy: strategies[j],
+			// 	Team2Strategy: strategies[i],
+			// })
 		}
 	}
 	return matches
@@ -246,8 +246,12 @@ func printTournamentMatrix(strategies []string, matches []MatchSpec, results []M
 	for i, m := range matches {
 		i1 := idx[m.Team1Strategy]
 		i2 := idx[m.Team2Strategy]
-		totals[i1][i2] += results[i].Team1Wins + results[i].Team2Wins
+		totalGames := results[i].Team1Wins + results[i].Team2Wins
+		// Populate both directions of the matchup
+		totals[i1][i2] += totalGames
+		totals[i2][i1] += totalGames
 		wins[i1][i2] += results[i].Team1Wins
+		wins[i2][i1] += results[i].Team2Wins
 	}
 
 	// Precompute cell strings and column widths

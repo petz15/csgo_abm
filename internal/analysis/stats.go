@@ -74,9 +74,39 @@ type SimulationConfig struct {
 // NewStats creates a new SimulationStats instance
 func NewStats(NumSimulations int, mode string) *SimulationStats {
 	return &SimulationStats{
+		// Core metrics
 		TotalSimulations: int64(NumSimulations),
-		SimulationMode:   mode,
-		StartTime:        time.Now(),
+		CompletedSims:    0,
+		FailedSims:       0,
+
+		// Game results
+		Team1Wins:     0,
+		Team2Wins:     0,
+		TotalRounds:   0,
+		OvertimeGames: 0,
+		Team1OTWins:   0,
+		Team2OTWins:   0,
+		Team1RTWins:   0,
+		Team2RTWins:   0,
+
+		// Calculated metrics
+		Team1WinRate:   0.0,
+		Team2WinRate:   0.0,
+		AverageRounds:  0.0,
+		OvertimeRate:   0.0,
+		Team1OTWinRate: 0.0,
+		Team2OTWinRate: 0.0,
+		Team1RTWinRate: 0.0,
+		Team2RTWinRate: 0.0,
+
+		// Performance metrics
+		ProcessingRate:  0.0,
+		PeakMemoryUsage: 0,
+		TotalGCRuns:     0,
+
+		// Metadata
+		SimulationMode: mode,
+		StartTime:      time.Now(),
 	}
 }
 

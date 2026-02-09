@@ -41,6 +41,9 @@ func ValidateAndPrepareCustomizations(gameRulesPath, abmModelsPath, exportPath s
 		fmt.Println("✅ Using default game rules.")
 	}
 
+	// Apply custom CSF r value if set in game rules
+	engine.SetCustomCSFRValue(config.GameRules.Custom_CSF_r_value)
+
 	// Validate export path
 	if err := validateExportPath(exportPath); err != nil {
 		return nil, fmt.Errorf("export path validation failed: %w", err)

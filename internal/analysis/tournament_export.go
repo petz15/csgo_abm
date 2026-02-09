@@ -16,14 +16,6 @@ func ExportTournamentSummary(dir string, matches []tournament.MatchSpec, series 
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	// JSON dump
-	if err := writeJSON(filepath.Join(dir, "tournament_summary.json"), map[string]interface{}{
-		"matches":   matches,
-		"series":    series,
-		"standings": standings,
-	}); err != nil {
-		return err
-	}
 	// CSV standings (best-effort if type provides GetRows)
 	f, err := os.Create(filepath.Join(dir, "tournament_standings.csv"))
 	if err != nil {

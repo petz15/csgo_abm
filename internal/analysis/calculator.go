@@ -58,10 +58,22 @@ func (s *SimulationStats) CalculateFinalStats() {
 	if s.CompletedSims > 0 {
 		s.Team1WinRate = float64(s.Team1Wins) / float64(s.CompletedSims) * 100
 		s.Team2WinRate = float64(s.Team2Wins) / float64(s.CompletedSims) * 100
-		s.Team1OTWinRate = float64(s.Team1OTWins) / float64(s.OvertimeGames) * 100
-		s.Team2OTWinRate = float64(s.Team2OTWins) / float64(s.OvertimeGames) * 100
-		s.Team1RTWinRate = float64(s.Team1RTWins) / float64(s.CompletedSims-s.OvertimeGames) * 100
-		s.Team2RTWinRate = float64(s.Team2RTWins) / float64(s.CompletedSims-s.OvertimeGames) * 100
+
+		if s.OvertimeGames > 0 {
+			s.Team1OTWinRate = float64(s.Team1OTWins) / float64(s.OvertimeGames) * 100
+			s.Team2OTWinRate = float64(s.Team2OTWins) / float64(s.OvertimeGames) * 100
+		} else {
+			s.Team1OTWinRate = 0
+			s.Team2OTWinRate = 0
+		}
+
+		if s.CompletedSims-s.OvertimeGames > 0 {
+			s.Team1RTWinRate = float64(s.Team1RTWins) / float64(s.CompletedSims-s.OvertimeGames) * 100
+			s.Team2RTWinRate = float64(s.Team2RTWins) / float64(s.CompletedSims-s.OvertimeGames) * 100
+		} else {
+			s.Team1RTWinRate = 0
+			s.Team2RTWinRate = 0
+		}
 
 		s.OvertimeRate = float64(s.OvertimeGames) / float64(s.CompletedSims) * 100
 		s.AverageRounds = float64(s.TotalRounds) / float64(s.CompletedSims)

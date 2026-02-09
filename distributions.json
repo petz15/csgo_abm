@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "csf_r_value": 99999,
+    "csf_r_value": 1.09072265625,
     "csf_range": "1-100 (integer percentages, CT win probability)",
     "csf_formula": "P(CT win) = CT_equipment^r / (CT_equipment^r + T_equipment^r)",
     "export_date": "2026-02-08",

@@ -82,6 +82,20 @@ func GetCSFRValue() float64 {
 	return distributions.Metadata.CSFRValue
 }
 
+// SetCustomCSFRValue overrides the CSF r value from distributions with a custom value.
+// If customRValue is negative, the original value from distributions is kept.
+// Returns true if a custom value was set, false otherwise.
+func SetCustomCSFRValue(customRValue float64) bool {
+	assertLoaded("SetCustomCSFRValue")
+	if customRValue >= 0 {
+		originalRValue := distributions.Metadata.CSFRValue
+		distributions.Metadata.CSFRValue = customRValue
+		fmt.Printf("Using custom CSF r value: %.2f (overriding probabilities.json value: %.2f)\n", customRValue, originalRValue)
+		return true
+	}
+	return false
+}
+
 // DetermineRoundOutcome determines all aspects of a round outcome based on CSF probability.
 // csfProb should be in [0,1], representing the CT win probability.
 func DetermineRoundOutcome(ct_eq_val float64, t_eq_val float64, rng *rand.Rand, gameR GameRules) RoundOutcome {

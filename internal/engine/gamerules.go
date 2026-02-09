@@ -24,6 +24,7 @@ type GameRules struct {
 	BombdefuseReward                float64    `json:"bombdefuseReward"`              // Reward for defusing the bomb
 	AdditionalReward_CT_Elimination float64    `json:"additionalCTEliminationReward"` // Additional reward for CT team for eliminations
 	AdditionalReward_T_Elimination  float64    `json:"additionalTEliminationReward"`  // Additional reward for T team for eliminations
+	Custom_CSF_r_value              float64    `json:"customRValue"`                  // Custom r value the CSF default is to use from the probabilities.json
 }
 
 // getDefaultRules returns the default game rules configuration
@@ -46,6 +47,7 @@ func getDefaultRules() GameRules {
 		BombdefuseReward:                300,
 		AdditionalReward_CT_Elimination: 0, //introduced in cs2, 50 per elimination for all CT players
 		AdditionalReward_T_Elimination:  0,
+		Custom_CSF_r_value:              -1, // Default value of 0 means "use default from probabilities.json"
 	}
 }
 
@@ -229,6 +231,12 @@ func NewGameRules(pathtoFile string) (GameRules, bool) {
 		// Load LossBonus array (only if not empty)
 		if len(jsonRules.LossBonus) > 0 {
 			candidateRules.LossBonus = jsonRules.LossBonus
+		}
+
+		// Load Custom_CSF_r_value (can be 0 to use default from probabilities.json)
+		// Negative values are invalid, but 0 means "use default"
+		if jsonRules.Custom_CSF_r_value >= 0 {
+			candidateRules.Custom_CSF_r_value = jsonRules.Custom_CSF_r_value
 		}
 
 		// Strict validation - if ANY value fails, use all defaults

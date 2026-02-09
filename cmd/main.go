@@ -11,9 +11,6 @@ import (
 )
 
 // Main entry point for the CS:GO Economy Simulation
-//TODO: write the analyzer in python in order to look at the detail results and anlyze them
-//TODO: (later) add support for importing strategies from a file. and AI/machine learning strategies. no clue how
-//TODO: make the resulting terminal output adjustable i.e. simple or pretty
 
 func main() {
 	// Default configuration using unified analysis package

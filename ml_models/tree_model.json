@@ -1,0 +1,487 @@
+{
+  "model_type": "decision_tree",
+  "tree": {
+    "is_leaf": false,
+    "feature": "own_funds",
+    "threshold": 0.022168772295117378,
+    "left": {
+      "is_leaf": false,
+      "feature": "own_funds",
+      "threshold": 0.017706267535686493,
+      "left": {
+        "is_leaf": false,
+        "feature": "own_funds",
+        "threshold": 0.015906265936791897,
+        "left": {
+          "is_leaf": true,
+          "value": 1.0
+        },
+        "right": {
+          "is_leaf": false,
+          "feature": "opponent_score",
+          "threshold": 0.40625,
+          "left": {
+            "is_leaf": true,
+            "value": 0.9346319755604158
+          },
+          "right": {
+            "is_leaf": false,
+            "feature": "own_funds",
+            "threshold": 0.017400017008185387,
+            "left": {
+              "is_leaf": true,
+              "value": 0.9929448447791732
+            },
+            "right": {
+              "is_leaf": true,
+              "value": 0.9660222907759
+            }
+          }
+        }
+      },
+      "right": {
+        "is_leaf": false,
+        "feature": "own_starting_equipment",
+        "threshold": 0.5497037172317505,
+        "left": {
+          "is_leaf": false,
+          "feature": "own_funds",
+          "threshold": 0.021275021135807037,
+          "left": {
+            "is_leaf": false,
+            "feature": "score_diff",
+            "threshold": 0.550000011920929,
+            "left": {
+              "is_leaf": false,
+              "feature": "round_number",
+              "threshold": 0.5333333313465118,
+              "left": {
+                "is_leaf": false,
+                "feature": "round_number",
+                "threshold": 0.4833333343267441,
+                "left": {
+                  "is_leaf": false,
+                  "feature": "own_funds",
+                  "threshold": 0.017843768000602722,
+                  "left": {
+                    "is_leaf": true,
+                    "value": 0.9715372826863424
+                  },
+                  "right": {
+                    "is_leaf": false,
+                    "feature": "own_survivors",
+                    "threshold": 0.7000000178813934,
+                    "left": {
+                      "is_leaf": false,
+                      "feature": "own_score",
+                      "threshold": 0.21875,
+                      "left": {
+                        "is_leaf": true,
+                        "value": 0.8848487669832201
+                      },
+                      "right": {
+                        "is_leaf": true,
+                        "value": 0.8524285674687853
+                      }
+                    },
+                    "right": {
+                      "is_leaf": true,
+                      "value": 0.7628054074165943
+                    }
+                  }
+                },
+                "right": {
+                  "is_leaf": true,
+                  "value": 1.0
+                }
+              },
+              "right": {
+                "is_leaf": false,
+                "feature": "round_number",
+                "threshold": 0.5833333432674408,
+                "left": {
+                  "is_leaf": true,
+                  "value": 0.7549857668554416
+                },
+                "right": {
+                  "is_leaf": false,
+                  "feature": "own_funds",
+                  "threshold": 0.018512518145143986,
+                  "left": {
+                    "is_leaf": true,
+                    "value": 0.9138663570158853
+                  },
+                  "right": {
+                    "is_leaf": false,
+                    "feature": "last_round_reason",
+                    "threshold": 0.875,
+                    "left": {
+                      "is_leaf": false,
+                      "feature": "own_funds",
+                      "threshold": 0.020237520337104797,
+                      "left": {
+                        "is_leaf": true,
+                        "value": 0.8681637055059134
+                      },
+                      "right": {
+                        "is_leaf": true,
+                        "value": 0.8280494895645502
+                      }
+                    },
+                    "right": {
+                      "is_leaf": true,
+                      "value": 0.7984463085698268
+                    }
+                  }
+                }
+              }
+            },
+            "right": {
+              "is_leaf": false,
+              "feature": "own_starting_equipment",
+              "threshold": 0.18029629439115524,
+              "left": {
+                "is_leaf": true,
+                "value": 0.7641253830089362
+              },
+              "right": {
+                "is_leaf": true,
+                "value": 0.84501481930314
+              }
+            }
+          },
+          "right": {
+            "is_leaf": true,
+            "value": 0.7624793580934158
+          }
+        },
+        "right": {
+          "is_leaf": false,
+          "feature": "own_funds",
+          "threshold": 0.019262519665062428,
+          "left": {
+            "is_leaf": false,
+            "feature": "own_starting_equipment",
+            "threshold": 0.6231481432914734,
+            "left": {
+              "is_leaf": true,
+              "value": 0.874290325122954
+            },
+            "right": {
+              "is_leaf": false,
+              "feature": "own_funds",
+              "threshold": 0.017900018021464348,
+              "left": {
+                "is_leaf": true,
+                "value": 0.9366174382932778
+              },
+              "right": {
+                "is_leaf": true,
+                "value": 0.9656913852551616
+              }
+            }
+          },
+          "right": {
+            "is_leaf": false,
+            "feature": "opponent_survivors",
+            "threshold": 0.4000000134110451,
+            "left": {
+              "is_leaf": false,
+              "feature": "own_score",
+              "threshold": 0.90625,
+              "left": {
+                "is_leaf": false,
+                "feature": "own_funds",
+                "threshold": 0.020656270906329155,
+                "left": {
+                  "is_leaf": false,
+                  "feature": "round_number",
+                  "threshold": 0.75,
+                  "left": {
+                    "is_leaf": false,
+                    "feature": "own_score",
+                    "threshold": 0.59375,
+                    "left": {
+                      "is_leaf": true,
+                      "value": 0.9005876468744939
+                    },
+                    "right": {
+                      "is_leaf": true,
+                      "value": 0.8486278679461549
+                    }
+                  },
+                  "right": {
+                    "is_leaf": true,
+                    "value": 0.9481579639482894
+                  }
+                },
+                "right": {
+                  "is_leaf": true,
+                  "value": 0.8513591830185836
+                }
+              },
+              "right": {
+                "is_leaf": true,
+                "value": 1.0
+              }
+            },
+            "right": {
+              "is_leaf": true,
+              "value": 1.0
+            }
+          }
+        }
+      }
+    },
+    "right": {
+      "is_leaf": false,
+      "feature": "own_funds",
+      "threshold": 0.027806277386844158,
+      "left": {
+        "is_leaf": false,
+        "feature": "round_number",
+        "threshold": 0.9833333194255829,
+        "left": {
+          "is_leaf": false,
+          "feature": "own_starting_equipment",
+          "threshold": 0.47938889265060425,
+          "left": {
+            "is_leaf": false,
+            "feature": "own_funds",
+            "threshold": 0.02576877549290657,
+            "left": {
+              "is_leaf": false,
+              "feature": "own_funds",
+              "threshold": 0.02319377288222313,
+              "left": {
+                "is_leaf": false,
+                "feature": "round_number",
+                "threshold": 0.11666667088866234,
+                "left": {
+                  "is_leaf": true,
+                  "value": 0.6677708555018144
+                },
+                "right": {
+                  "is_leaf": false,
+                  "feature": "score_diff",
+                  "threshold": 0.45000000298023224,
+                  "left": {
+                    "is_leaf": true,
+                    "value": 0.7665639557176724
+                  },
+                  "right": {
+                    "is_leaf": true,
+                    "value": 0.7330075043537893
+                  }
+                }
+              },
+              "right": {
+                "is_leaf": false,
+                "feature": "consecutive_losses",
+                "threshold": 0.10000000149011612,
+                "left": {
+                  "is_leaf": true,
+                  "value": 0.6968661413895282
+                },
+                "right": {
+                  "is_leaf": true,
+                  "value": 0.6514190714604435
+                }
+              }
+            },
+            "right": {
+              "is_leaf": false,
+              "feature": "last_round_reason",
+              "threshold": 0.625,
+              "left": {
+                "is_leaf": true,
+                "value": 0.6336131909522483
+              },
+              "right": {
+                "is_leaf": true,
+                "value": 0.5847154238372522
+              }
+            }
+          },
+          "right": {
+            "is_leaf": false,
+            "feature": "own_funds",
+            "threshold": 0.024450024589896202,
+            "left": {
+              "is_leaf": false,
+              "feature": "own_funds",
+              "threshold": 0.022512522526085377,
+              "left": {
+                "is_leaf": true,
+                "value": 0.7418677859391396
+              },
+              "right": {
+                "is_leaf": true,
+                "value": 0.812959295376441
+              }
+            },
+            "right": {
+              "is_leaf": true,
+              "value": 0.7404653811309173
+            }
+          }
+        },
+        "right": {
+          "is_leaf": true,
+          "value": 1.0
+        }
+      },
+      "right": {
+        "is_leaf": false,
+        "feature": "round_number",
+        "threshold": 1.1833333373069763,
+        "left": {
+          "is_leaf": false,
+          "feature": "own_starting_equipment",
+          "threshold": 0.6704444289207458,
+          "left": {
+            "is_leaf": false,
+            "feature": "own_funds",
+            "threshold": 0.04956254921853542,
+            "left": {
+              "is_leaf": false,
+              "feature": "own_funds",
+              "threshold": 0.04809379763901234,
+              "left": {
+                "is_leaf": false,
+                "feature": "consecutive_losses",
+                "threshold": 0.5000000149011612,
+                "left": {
+                  "is_leaf": false,
+                  "feature": "round_number",
+                  "threshold": 0.8499999940395355,
+                  "left": {
+                    "is_leaf": false,
+                    "feature": "round_number",
+                    "threshold": 0.4833333343267441,
+                    "left": {
+                      "is_leaf": false,
+                      "feature": "own_funds",
+                      "threshold": 0.03894378989934921,
+                      "left": {
+                        "is_leaf": true,
+                        "value": 0.5383509320921868
+                      },
+                      "right": {
+                        "is_leaf": true,
+                        "value": 0.429839238449307
+                      }
+                    },
+                    "right": {
+                      "is_leaf": false,
+                      "feature": "round_number",
+                      "threshold": 0.5999999940395355,
+                      "left": {
+                        "is_leaf": true,
+                        "value": 1.0
+                      },
+                      "right": {
+                        "is_leaf": true,
+                        "value": 0.536585912369464
+                      }
+                    }
+                  },
+                  "right": {
+                    "is_leaf": true,
+                    "value": 0.41989099787924544
+                  }
+                },
+                "right": {
+                  "is_leaf": true,
+                  "value": 0.6881141761101486
+                }
+              },
+              "right": {
+                "is_leaf": true,
+                "value": 1.0
+              }
+            },
+            "right": {
+              "is_leaf": true,
+              "value": 0.31602915757600564
+            }
+          },
+          "right": {
+            "is_leaf": false,
+            "feature": "own_funds",
+            "threshold": 0.0482750479131937,
+            "left": {
+              "is_leaf": false,
+              "feature": "own_score",
+              "threshold": 0.40625,
+              "left": {
+                "is_leaf": true,
+                "value": 0.8648314788243903
+              },
+              "right": {
+                "is_leaf": false,
+                "feature": "own_funds",
+                "threshold": 0.033456284552812576,
+                "left": {
+                  "is_leaf": true,
+                  "value": 0.6983267276338504
+                },
+                "right": {
+                  "is_leaf": false,
+                  "feature": "consecutive_losses",
+                  "threshold": 0.10000000149011612,
+                  "left": {
+                    "is_leaf": true,
+                    "value": 0.6196407119135756
+                  },
+                  "right": {
+                    "is_leaf": true,
+                    "value": 0.5443601219141683
+                  }
+                }
+              }
+            },
+            "right": {
+              "is_leaf": true,
+              "value": 1.0
+            }
+          }
+        },
+        "right": {
+          "is_leaf": true,
+          "value": 1.0
+        }
+      }
+    }
+  },
+  "state_features": [
+    "own_funds",
+    "own_score",
+    "opponent_score",
+    "own_survivors",
+    "opponent_survivors",
+    "consecutive_losses",
+    "is_ct_side",
+    "round_number",
+    "half_length",
+    "last_round_reason",
+    "last_bomb_planted",
+    "own_starting_equipment",
+    "score_diff"
+  ],
+  "normalization": {
+    "own_funds": 999999.0,
+    "own_score": 16.0,
+    "opponent_score": 16.0,
+    "own_survivors": 5.0,
+    "opponent_survivors": 5.0,
+    "consecutive_losses": 5.0,
+    "round_number": 30.0,
+    "half_length": 15.0,
+    "last_round_reason": 4.0,
+    "own_starting_equipment": 999999.0,
+    "score_diff": 30.0,
+    "opponent_funds": 999999.0,
+    "opponent_starting_equipment": 999999.0
+  }
+}
