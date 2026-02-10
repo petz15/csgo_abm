@@ -33,22 +33,30 @@ docker-compose build
 # Make the script executable (first time only)
 chmod +x run_analysis.sh
 
-# Run analysis
-./run_analysis.sh results_20260210_011606 8 true
+# Run analysis (results from /mnt/hdd/csgo_abm)
+./run_analysis.sh results_20260210_011606 8 false /mnt/hdd/csgo_abm
+
+# Or with first round analysis enabled
+./run_analysis.sh results_20260210_011606 8 true /mnt/hdd/csgo_abm
 ```
 
 **Manual Docker command:**
 
 ```bash
-docker run --rm -v "$(pwd)/..:/app" -w /app csgo-abm-analysis \
-  python batch_analyze_tournament.py results_20260210_011606 --workers 8
+docker run --rm \
+  -v "$(pwd)/..:/app" \
+  -v "/mnt/hdd/csgo_abm:/mnt/results" \
+  -w /app \
+  csgo-abm-analysis \
+  python batch_analyze_tournament.py /mnt/results/results_20260210_011606 --workers 8
 ```
 
 **Using docker-compose:**
 
 ```bash
+# Results are auto-mounted from /mnt/hdd/csgo_abm to /mnt/results inside container
 docker-compose run --rm csgo-analysis \
-  python batch_analyze_tournament.py results_20260210_011606 --workers 8
+  python batch_analyze_tournament.py /mnt/results/results_20260210_011606 --workers 8
 ```
 
 ### 3. Run Jupyter Notebook
@@ -85,17 +93,18 @@ Runs batch tournament analysis with customizable parameters.
 
 **Syntax:**
 ```bash
-./run_analysis.sh <tournament_folder> [workers] [enable_first_round]
+./run_analysis.sh <tournament_folder> [workers] [enable_first_round] [results_base_path]
 ```
 
 **Arguments:**
-- `tournament_folder`: Path to tournament results folder (required)
+- `tournament_folder`: Name of tournament results folder (required)
 - `workers`: Number of parallel workers (default: 4)
 - `enable_first_round`: Set to "true" to enable first round analysis (default: false)
+- `results_base_path`: Base path where results are stored (default: /mnt/hdd/csgo_abm)
 
 **Examples:**
 ```bash
-# Basic usage with default workers
+# Basic usage with default settings (results from /mnt/hdd/csgo_abm)
 ./run_analysis.sh results_20260210_011606
 
 # With 8 workers
@@ -103,6 +112,12 @@ Runs batch tournament analysis with customizable parameters.
 
 # With first round analysis enabled
 ./run_analysis.sh results_20260210_011606 8 true
+
+# With custom results location
+./run_analysis.sh results_20260210_011606 8 false /mnt/hdd/csgo_abm
+
+# Full example with all parameters
+./run_analysis.sh results_20260210_011606 8 true /mnt/hdd/csgo_abm
 ```
 
 ### run_jupyter.sh
@@ -181,12 +196,22 @@ docker logs csgo-abm-analysis
 **Port Already in Use:**
 Change the port mapping or kill the process using the port:
 ```bash
-# Find process using port 8888
-lsof -i :8888
+# FVolume Mounts
 
-# Use different port
-./run_jupyter.sh 9999
-```
+The Docker setup uses the following volume mounts:
+
+- `..:/app` - Maps parent directory (csgo_abm) to /app for access to scripts and notebooks
+- `/mnt/hdd/csgo_abm:/mnt/results` - Maps your results directory to /mnt/results inside container
+
+**Important:** The results location is configured for `/mnt/hdd/csgo_abm` by default. If your results are in a different location, update `docker-compose.yml` or provide the path when using `run_analysis.sh`.
+
+## Notes
+
+- All results and HTML files are saved to your host machine via volume mounting
+- The Docker container has access to all files in the parent `csgo_abm` directory
+- Jupyter notebooks execute within the container but files are persisted on your host
+- The image includes all necessary Python packages for data analysis and visualization
+- Results are expected at `/mnt/hdd/csgo_abm` on the host machine (mounted to `/mnt/results` in container)
 
 ## Notes
 

@@ -8,7 +8,7 @@ services:
     container_name: csgo-abm-analysis
     volumes:
       - ..:/app
-      - ../results:/mnt/hdd/csgo_abm
+      - /mnt/hdd/csgo_abm:/mnt/results
     environment:
       - PYTHONUNBUFFERED=1
     stdin_open: true
