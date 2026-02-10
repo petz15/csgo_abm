@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  csgo-analysis:
+    build:
+      context: ..
+      dockerfile: docker_EGTA/Dockerfile
+    container_name: csgo-abm-analysis
+    volumes:
+      - ..:/app
+      - ../results:/app/results
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true

@@ -26,6 +26,7 @@ var StrategyRegistry = map[string]StrategyFunc{
 	"min_max_v2":     InvestDecisionMaking_min_max_v2,
 	"min_max_v3":     InvestDecisionMaking_min_max_v3,
 	"expected_value": InvestDecisionMaking_expected_value,
+	"min_max_v4":     InvestDecisionMaking_min_max_v4,
 
 	// Adaptive
 	"adaptive_eco_v1": InvestDecisionMaking_adaptive_v1,
