@@ -13,6 +13,6 @@ services:
       - PYTHONUNBUFFERED=1
     stdin_open: true
     tty: true
-    shm_size: '4gb'
-    mem_limit: 10g
+    shm_size: '6gb'
+    mem_limit: 15g
     memswap_limit: 16g
