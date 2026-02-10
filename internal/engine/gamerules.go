@@ -7,9 +7,9 @@ import (
 )
 
 type GameRules struct {
-	DefaultEquipment                float64    `json:"defaultEquipment"`              // Default equipment cost
+	DefaultEquipment                float64    `json:"defaultEquipment"`              // Default equipment
 	OTFunds                         float64    `json:"otFunds"`                       // Overtime funds
-	OTEquipment                     float64    `json:"otEquipment"`                   // Overtime equipment cost
+	OTEquipment                     float64    `json:"otEquipment"`                   // Overtime equipment
 	StartingFunds                   float64    `json:"startingFunds"`                 // Starting funds for teams
 	HalfLength                      int        `json:"halfLength"`                    // Length of a half in rounds
 	OTHalfLength                    int        `json:"otHalfLength"`                  // Length of overtime half in rounds

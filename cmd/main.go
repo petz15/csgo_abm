@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 )
@@ -119,7 +120,7 @@ func main() {
 
 	// Set the results directory - use custom path if specified, otherwise create timestamped directory
 	if customOutputPath != "" {
-		config.Exportpath = customOutputPath
+		config.Exportpath = filepath.Clean(customOutputPath)
 	} else {
 		config.Exportpath = fmt.Sprintf("results_%s", time.Now().Format("20060102_150405"))
 	}

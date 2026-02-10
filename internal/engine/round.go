@@ -18,6 +18,9 @@ func NewRound(T1 *Team, T2 *Team, roundNumber int, ctteam bool, gamerules *GameR
 	if roundNumber != 1 { //avoid calling NewRound on first round twice
 		T1.NewRound(gamerules.DefaultEquipment)
 		T2.NewRound(gamerules.DefaultEquipment)
+	} else if ot {
+		T1.NewRound(gamerules.OTEquipment)
+		T2.NewRound(gamerules.OTEquipment)
 	}
 
 	return &Round{

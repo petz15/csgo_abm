@@ -16,5 +16,5 @@
   "bombdefuseReward": 300.0,
   "additionalCTEliminationReward": 0.0,
   "additionalTEliminationReward": 0.0,
-  "customRValue": 999999.0
+  "customRValue": 0.5
 }

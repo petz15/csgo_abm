@@ -46,6 +46,9 @@ func InvestDecisionMaking_anti_allin_v3_copy(ctx StrategyContext_simple) float64
 			//also go all in if round after pistol and it is not overtime and we won pistol
 			return ctx.Funds
 		}
+	} else if ctx.GameRules_strategy.WithSaves {
+		//in overtime with recovery i.e. saves, invest everything as some of the investment can be recoverd
+		return ctx.Funds
 	} else if ctx.IsFirstRoundHalf && ctx.GameRules_strategy.OTFunds > avgArray(ctx.GameRules_strategy.RoundOutcomeReward[:])*2.5 {
 		// try to bait all in strat to spend everything in the first round of overtime
 		//hoping in the consecutive rounds they will have considerably less funds
