@@ -20,7 +20,7 @@ echo "First round analysis: ${ENABLE_FIRST_ROUND:-false}"
 echo "Results location: $RESULTS_BASE_PATH"
 echo "---"
 
-docker run --rm \
+sudo docker run --rm \
   -v "$(pwd)/..:/app" \
   -v "$RESULTS_BASE_PATH:/mnt/results" \
   -w /app \
