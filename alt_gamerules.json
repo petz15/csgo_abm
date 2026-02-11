@@ -15,5 +15,6 @@
   "bombplantReward": 300.0,
   "bombdefuseReward": 300.0,
   "additionalCTEliminationReward": 0.0,
-  "additionalTEliminationReward": 0.0
+  "additionalTEliminationReward": 0.0,
+  "customRValue": -1
 }

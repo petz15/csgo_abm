@@ -216,6 +216,10 @@ func NewGameRules(pathtoFile string) (GameRules, bool) {
 			candidateRules.AdditionalReward_T_Elimination = jsonRules.AdditionalReward_T_Elimination
 		}
 
+		if jsonRules.Custom_CSF_r_value >= 0 {
+			candidateRules.Custom_CSF_r_value = jsonRules.Custom_CSF_r_value
+		}
+
 		// Load RoundOutcomeReward array (check if any values are set)
 		hasRoundRewards := false
 		for _, val := range jsonRules.RoundOutcomeReward {
