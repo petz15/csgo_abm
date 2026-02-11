@@ -1,0 +1,19 @@
+{
+  "defaultEquipment": 200.0,
+  "otFunds": 10000.0,
+  "otEquipment": 200.0,
+  "startingFunds": 800.0,
+  "halfLength": 15,
+  "otHalfLength": 3,
+  "maxFunds": 80000.0,
+  "lossBonusCalc": false,
+  "withSaves": true,
+  "lossBonus": [1400.0, 1900.0, 2400.0, 2900.0, 3400.0],
+  "roundOutcomeReward": [3500.0, 3250.0, 3500.0, 3250.0],
+  "eliminationReward": 300.0,
+  "bombplantRewardall": 800.0,
+  "bombplantReward": 300.0,
+  "bombdefuseReward": 300.0,
+  "additionalCTEliminationReward": 0.0,
+  "additionalTEliminationReward": 0.0
+}
