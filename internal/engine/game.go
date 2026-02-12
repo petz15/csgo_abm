@@ -79,7 +79,7 @@ func (g *Game) Start() {
 			g.OT = true
 			g.OTcounter++
 			round.HandleOTStart(g.Team1, g.Team2)
-		} else if g.OT && g.CurrentRound == (g.GameRules.HalfLength*2)+(g.OTcounter*g.GameRules.OTHalfLength)+1 {
+		} else if g.OT && g.CurrentRound == (g.GameRules.HalfLength*2)+((g.OTcounter-1)*g.GameRules.OTHalfLength*2)+g.GameRules.OTHalfLength+1 {
 			// OT halftime side switch
 			round.HandleOTSideSwitch(g.Team1, g.Team2)
 			g.is_T1_CT = !g.is_T1_CT

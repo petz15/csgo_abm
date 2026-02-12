@@ -68,8 +68,21 @@ func GetProbabilities() *ProcessedDistributions {
 
 // ContestSuccessFunction calculates win probability using Tullock CSF.
 // Returns the probability that side with expenditure x wins against side with expenditure y.
+// When r > 99, treats it as an all-pay auction where higher expenditure wins with probability 1.0 or 0.0.
 func CSF(x float64, y float64) float64 {
 	r := GetCSFRValue()
+
+	// All-pay auction: r > 99 means winner-takes-all based on expenditure
+	if r > 99 {
+		if x > y {
+			return 1.0
+		} else if x < y {
+			return 0.0
+		} else {
+			return 0.5 // Equal expenditure = 50/50
+		}
+	}
+
 	return math.Pow(x, r) / (math.Pow(x, r) + math.Pow(y, r))
 }
 
