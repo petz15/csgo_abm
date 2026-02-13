@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"csgo_abm/internal/tournament"
+	"dbg_abm/internal/tournament"
 )
 
 // ExportTournamentSummary writes tournament matches, series, and standings to JSON and standings CSV

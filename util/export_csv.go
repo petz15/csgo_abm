@@ -1,7 +1,7 @@
 package util
 
 import (
-	"csgo_abm/internal/engine"
+	"dbg_abm/internal/engine"
 	"encoding/csv"
 	"fmt"
 	"os"

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"csgo_abm/internal/engine"
-	"csgo_abm/internal/strategy"
+	"dbg_abm/internal/engine"
+	"dbg_abm/internal/strategy"
 	"fmt"
 	"math"
 	"os"
@@ -22,7 +22,7 @@ func main() {
 		Team1Name:             "Team A",
 		Team1Strategy:         "all_in",
 		Team2Name:             "Team B",
-		Team2Strategy:         "xen_model",
+		Team2Strategy:         "anti_allin_v3",
 		Sequential:            false, // Default to parallel simulations
 		ExportDetailedResults: false, // Default to not export individual results
 		ExportRounds:          false, // Default to not export round-by-round data

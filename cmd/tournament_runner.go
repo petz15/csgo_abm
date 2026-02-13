@@ -1,9 +1,9 @@
 package main
 
 import (
-	"csgo_abm/internal/analysis"
-	"csgo_abm/internal/strategy"
-	"csgo_abm/internal/tournament"
+	"dbg_abm/internal/analysis"
+	"dbg_abm/internal/strategy"
+	"dbg_abm/internal/tournament"
 	"fmt"
 	"os"
 	"strings"

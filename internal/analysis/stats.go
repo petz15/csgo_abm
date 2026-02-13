@@ -1,7 +1,7 @@
 package analysis
 
 import (
-	"csgo_abm/internal/engine"
+	"dbg_abm/internal/engine"
 	"sync"
 	"time"
 )

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"csgo_abm/internal/engine"
+	"dbg_abm/internal/engine"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -96,4 +96,3 @@ func validateExportPath(exportPath string) error {
 
 	return nil
 }
-

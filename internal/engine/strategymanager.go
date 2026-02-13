@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"csgo_abm/internal/strategy"
+	"dbg_abm/internal/strategy"
 	"fmt"
 	"math"
 )

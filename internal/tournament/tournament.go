@@ -2,7 +2,7 @@ package tournament
 
 import (
 	"context"
-	"csgo_abm/internal/engine"
+	"dbg_abm/internal/engine"
 	"time"
 )
 
